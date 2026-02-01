@@ -297,14 +297,14 @@ platformio device monitor --baud 115200
 
 </div>
 
-[forks-shield]: https://img.shields.io/github/forks/EasonChen11/esp32-weight-scale.svg?style=for-the-badge
-[forks-url]: https://github.com/EasonChen11/esp32-weight-scale/network/members
+[forks-shield]: https://img.shields.io/github/forks/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
+[forks-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/network/members
 
-[stars-shield]: https://img.shields.io/github/stars/EasonChen11/esp32-weight-scale.svg?style=for-the-badge
-[stars-url]: https://github.com/EasonChen11/esp32-weight-scale/stargazers
+[stars-shield]: https://img.shields.io/github/stars/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
+[stars-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/stargazers
 
-[issues-shield]: https://img.shields.io/github/issues/EasonChen11/esp32-weight-scale.svg?style=for-the-badge
-[issues-url]: https://github.com/EasonChen11/esp32-weight-scale/issues
+[issues-shield]: https://img.shields.io/github/issues/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
+[issues-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/issues
 
-[license-shield]: https://img.shields.io/github/license/EasonChen11/esp32-weight-scale.svg?style=for-the-badge
-[license-url]: https://github.com/EasonChen11/esp32-weight-scale/blob/main/LICENSE
+[license-shield]: https://img.shields.io/github/license/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
+[license-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/blob/main/LICENSE
