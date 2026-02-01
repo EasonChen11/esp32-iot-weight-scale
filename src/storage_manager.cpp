@@ -4,15 +4,54 @@
 
 const char *FILE_PATH = "/records.json";
 
+/*
+Internal helper function to save a JSON document to the storage file.
+This is a private function used by other storage functions to persist data.
+
+Parameters:
+  doc (JsonDocument&): The JSON document to save
+
+Returns:
+  void
+*/
+static void saveJsonToFile(JsonDocument &doc)
+{
+    File file = LittleFS.open(FILE_PATH, "w");
+    serializeJson(doc, file);
+    file.close();
+}
+
+/*
+Initialize the SPIFFS (SPI Flash File System) for data storage.
+This function must be called once during setup() to mount the filesystem
+and prepare for reading/writing persistent data.
+
+Parameters:
+  none
+
+Returns:
+  void
+*/
 void initStorage()
 {
     if (!LittleFS.begin(true))
     {
-        Serial.println("LittleFS Mount Failed");
+        Serial.println("LittleFS mount failed");
         return;
     }
 }
 
+/*
+Retrieve all stored weight records as a JSON string.
+Returns a JSON array containing all stored measurement records, or an empty
+array "[]" if no records exist or if the file cannot be read.
+
+Parameters:
+  none
+
+Returns:
+  String: JSON array of records
+*/
 String getRecordsJson()
 {
     File file = LittleFS.open(FILE_PATH, "r");
@@ -23,26 +62,29 @@ String getRecordsJson()
     return content;
 }
 
-void saveJsonToFile(JsonDocument &doc)
-{
-    File file = LittleFS.open(FILE_PATH, "w");
-    serializeJson(doc, file);
-    file.close();
-}
+/*
+Add a new weight measurement record to persistent storage.
+This function inserts a new record at the beginning of the records array
+and maintains a maximum of 10 recent records by removing the oldest entries.
 
+Parameters:
+  time (String): Timestamp string for the measurement (e.g., "10:30:45")
+  weight (String): Weight value as a string (e.g., "2.45")
+
+Returns:
+  void
+*/
 void addRecordToStorage(String time, String weight)
 {
     JsonDocument doc;
     deserializeJson(doc, getRecordsJson());
     JsonArray array = doc.as<JsonArray>();
 
-    // 建立新紀錄並插入到最前面 (unshift)
     JsonDocument newEntryDoc;
     JsonObject newEntry = newEntryDoc.to<JsonObject>();
     newEntry["time"] = time;
     newEntry["weight"] = weight;
 
-    // 手動模擬 unshift：建立新陣列並複製
     JsonDocument nextDoc;
     JsonArray nextArray = nextDoc.to<JsonArray>();
     nextArray.add(newEntry);
@@ -54,6 +96,16 @@ void addRecordToStorage(String time, String weight)
     saveJsonToFile(nextDoc);
 }
 
+/*
+Delete a specific weight record by index from persistent storage.
+Removes the record at the given index position from the records array.
+
+Parameters:
+  index (int): Zero-based index of the record to delete
+
+Returns:
+  void
+*/
 void deleteRecordFromStorage(int index)
 {
     JsonDocument doc;
@@ -63,23 +115,56 @@ void deleteRecordFromStorage(int index)
     saveJsonToFile(doc);
 }
 
-void clearRecordsInStorage() {
+/*
+Clear all weight records from persistent storage.
+Deletes all measurement records and leaves an empty array in storage.
+
+Parameters:
+  none
+
+Returns:
+  void
+*/
+void clearRecordsInStorage()
+{
     JsonDocument doc;
-    doc.to<JsonArray>(); // 建立一個空的陣列
+    doc.to<JsonArray>();
     saveJsonToFile(doc);
 }
 
-// 儲存絕對零點
-void saveAbsoluteOffset(long offset) {
-    JsonDocument doc;
-    deserializeJson(doc, getRecordsJson()); // 取得現有資料
-    doc["offset"] = offset; // 加入或更新 offset
-    saveJsonToFile(doc);
-}
+/*
+Save the absolute zero-point offset value to persistent storage.
+This stores the sensor calibration offset for use during the next startup,
+ensuring consistent measurements across power cycles.
 
-// 取得絕對零點
-long getAbsoluteOffset() {
+Parameters:
+  offset (long): The raw offset value from the sensor
+
+Returns:
+  void
+*/
+void saveAbsoluteOffset(long offset)
+{
     JsonDocument doc;
     deserializeJson(doc, getRecordsJson());
-    return doc["offset"] | 0; // 如果沒存過，預設為 0
+    doc["offset"] = offset;
+    saveJsonToFile(doc);
+}
+
+/*
+Retrieve the previously saved absolute zero-point offset from storage.
+Returns the stored calibration offset, or 0 if no offset has been saved.
+This value is used to initialize the sensor during startup.
+
+Parameters:
+  none
+
+Returns:
+  long: The stored offset value, or 0 if not previously set
+*/
+long getAbsoluteOffset()
+{
+    JsonDocument doc;
+    deserializeJson(doc, getRecordsJson());
+    return doc["offset"] | 0;
 }
