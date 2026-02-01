@@ -56,6 +56,11 @@ String getIndexHTML()
         th, td { padding: 12px 8px; border-bottom: 1px solid #eee; text-align: center; }
         th { background-color: #f8f9fa; color: #666; }
         .btn-del { background: none; color: #e74c3c; box-shadow: none; padding: 5px; font-size: 14px; font-weight: bold; width: auto; }
+        .calibration-panel { margin-top: 18px; text-align: left; }
+        .calibration-panel summary { cursor: pointer; list-style: none; font-size: 13px; color: #e74c3c; font-weight: bold; }
+        .calibration-panel summary::-webkit-details-marker { display: none; }
+        .calibration-content { margin-top: 10px; padding: 12px; border: 1px dashed #e74c3c; border-radius: 12px; background-color: #fffafa; }
+        .calibration-note { color: #7f8c8d; font-size: 11px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -90,11 +95,14 @@ String getIndexHTML()
             </table>
             <button class="btn-clear-all" onclick="clearAll()">Clear All Records</button>
 
-            <div style="margin-top: 40px; padding: 15px; border: 1px dashed #e74c3c; border-radius: 12px; background-color: #fffafa;">
-                <p style="color: #7f8c8d; font-size: 11px; margin-bottom: 10px;">Perform only when scale is completely empty for absolute zero calibration.</p>
-                <button style="background: white; color: #e74c3c; border: 1px solid #e74c3c; padding: 8px 16px; font-size: 13px; border-radius: 6px; width: 100%; box-shadow: none;" 
-                        onclick="setAbsoluteZero()">Calibrate Absolute Zero</button>
-            </div>
+            <details class="calibration-panel">
+                <summary>Absolute Zero Calibration</summary>
+                <div class="calibration-content">
+                    <p class="calibration-note">Perform only when the scale is completely empty.</p>
+                    <button style="background: white; color: #e74c3c; border: 1px solid #e74c3c; padding: 8px 16px; font-size: 13px; border-radius: 6px; width: 100%; box-shadow: none;" 
+                            onclick="setAbsoluteZero()">Calibrate Absolute Zero</button>
+                </div>
+            </details>
         </div>
     </div>
 

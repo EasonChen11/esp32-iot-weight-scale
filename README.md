@@ -4,9 +4,9 @@
 
 A feature-rich WiFi-enabled weight measurement system using ESP32 and HX711 load cell sensor with web-based monitoring and data logging.
 
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
+<!-- [![Forks][forks-shield]][forks-url] -->
+<!-- [![Stargazers][stars-shield]][stars-url] -->
+<!-- [![Issues][issues-shield]][issues-url] -->
 [![MIT License][license-shield]][license-url]
 ![Status](https://img.shields.io/badge/Status-Active-green?style=for-the-badge)
 ![Language](https://img.shields.io/badge/Language-C++-blue?style=for-the-badge)
