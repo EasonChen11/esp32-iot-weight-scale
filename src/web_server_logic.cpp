@@ -1,8 +1,8 @@
 #include "web_server_logic.h"
-#include "web_pages.h"      // 為了 getIndexHTML
-#include "sensor_manager.h" // 為了 getWeight 和 tareSensor
+#include "web_pages.h"       // 為了 getIndexHTML
+#include "sensor_manager.h"  // 為了 getWeight 和 tareSensor
 #include "storage_manager.h" // 為了儲存紀錄相關函式
-#include <time.h>           // 為了時間同步
+#include <time.h>            // 為了時間同步
 
 void initWebRoutes(WebServer &server)
 {
@@ -70,5 +70,18 @@ void initWebRoutes(WebServer &server)
     int index = server.arg("i").toInt();
     deleteRecordFromStorage(index);
     server.send(200, "application/json", getRecordsJson()); });
+    // 清除所有紀錄
+    server.on("/clear-records", [&server]()
+              {
+                  clearRecordsInStorage();
+                  server.send(200, "application/json", "[]"); // 回傳空陣列
+              });
+
+    server.on("/set-zero", [&server]()
+              {    
+    long newOffset = captureAbsoluteOffset();// 1. 叫 Sensor 擷取當前的 Offset 原始值
+    saveAbsoluteOffset(newOffset); // 2. 叫 Storage 把這個值存進 LittleFS
+    Serial.printf("[Web] 已完成絕對零點校正，新 Offset: %ld\n", newOffset);
+    server.send(200, "text/plain", "OK"); });// 3. 回傳簡單的字串，前端的 fetch 會接收這個 data
     server.begin();
 }
