@@ -6,6 +6,14 @@
 
 WebServer server(80);
 
+/*
+System initialization routine.
+Sets up serial communication, initializes storage, loads calibration data,
+configures WiFi, initializes the weight sensor, and sets up all HTTP routes.
+
+Returns:
+  void
+*/
 void setup()
 {
     Serial.begin(115200);
@@ -17,8 +25,16 @@ void setup()
     initWebRoutes(server);
 }
 
+/*
+Main application loop.
+Handles incoming HTTP client requests and updates the weight sensor readings
+at regular intervals.
+
+Returns:
+  void
+*/
 void loop()
 {
-    server.handleClient(); // 處理網路請求
-    updateSensor();        // 處理數據採樣
+    server.handleClient();
+    updateSensor();
 }
