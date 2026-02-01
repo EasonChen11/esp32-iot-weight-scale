@@ -28,6 +28,19 @@ String getIndexHTML()
         .btn-tare { background-color: #e74c3c; } 
         .btn-record { background-color: #2ecc71; }
         
+        /* 刪除全部按鈕樣式 */
+        .btn-clear-all { 
+            background-color: transparent; 
+            color: #95a5a6; 
+            border: 1px solid #bdc3c7; 
+            margin-top: 15px; 
+            padding: 8px 16px; 
+            font-size: 13px; 
+            width: 100%; 
+            box-shadow: none;
+        }
+        .btn-clear-all:hover { background-color: #f8f9fa; color: #e74c3c; border-color: #e74c3c; }
+
         /* 表格樣式 */
         .table-container { margin-top: 20px; border-top: 2px solid #eee; padding-top: 20px; }
         table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; }
@@ -39,7 +52,7 @@ String getIndexHTML()
 <body>
     <div class='card'>
         <div id="clock" class="time-info">系統時間: --:--:--</div>
-        <h1>即時重量監控</h1>
+        <h1>重量監測</h1>
         <div id='weight'>0.00</div>
         <div class="unit">kg</div>
         
@@ -53,19 +66,26 @@ String getIndexHTML()
         </div>
 
         <div class="table-container">
-            <h3 style="color:#555; font-size:16px;">持久化紀錄 (最多 10 筆)</h3>
+            <h3 style="color:#555; font-size:16px;">數據紀錄 (最多 10 筆)</h3>
             <table id="recordTable">
                 <thead>
                     <tr>
                         <th>#</th>
                         <th>時間</th>
                         <th>重量 (kg)</th>
-                        <th>操作</th>
+                        <th>刪除</th>
                     </tr>
                 </thead>
                 <tbody id="recordBody">
-                    </tbody>
+                </tbody>
             </table>
+            <button class="btn-clear-all" onclick="clearAll()">清空所有紀錄</button>
+
+            <div style="margin-top: 40px; padding: 15px; border: 1px dashed #e74c3c; border-radius: 12px; background-color: #fffafa;">
+                <p style="color: #7f8c8d; font-size: 11px; margin-bottom: 10px;">僅在秤盤完全清空時，用於絕對零點校正。</p>
+                <button style="background: white; color: #e74c3c; border: 1px solid #e74c3c; padding: 8px 16px; font-size: 13px; border-radius: 6px; width: 100%; box-shadow: none;" 
+                        onclick="setAbsoluteZero()">執行絕對零點校正</button>
+            </div>
         </div>
     </div>
 
@@ -95,14 +115,13 @@ String getIndexHTML()
                     maintainAspectRatio: false,
                     animation: false,
                     scales: { y: { beginAtZero: false, grace: '10%' } },
-                    plugins: { legend: { display: true } } // for two datasets, (false for one)
+                    plugins: { legend: { display: false } }
                 }
             });
         }
 
         // --- 持久化儲存核心邏輯 ---
 
-        // 渲染表格內容 (傳入後端回傳的 JSON 陣列)
         function renderTable(data) {
             const records = typeof data === 'string' ? JSON.parse(data) : data;
             const tbody = document.getElementById('recordBody');
@@ -119,27 +138,32 @@ String getIndexHTML()
             });
         }
 
-        // 從 ESP32 獲取已存紀錄
         function fetchRecords() {
             fetch('/get-records').then(r => r.json()).then(renderTable);
         }
 
-        // 新增紀錄：傳送到後端並儲存於 LittleFS
         function addRecord() {
             const timeStr = new Date().toLocaleTimeString('zh-TW', { hour12: false });
             const currentW = document.getElementById('weight').innerText;
-            
-            // 呼叫後端 API
             fetch(`/add-record?t=${encodeURIComponent(timeStr)}&w=${currentW}`)
                 .then(r => r.json())
                 .then(renderTable);
         }
 
-        // 刪除紀錄：從後端檔案中移除
         function deleteRecord(index) {
             fetch(`/del-record?i=${index}`)
                 .then(r => r.json())
                 .then(renderTable);
+        }
+
+        // --- 新增：清空所有紀錄函式 ---
+        function clearAll() {
+            if (confirm("確定要刪除所有歷史紀錄嗎？這動作無法復原。")) {
+                fetch('/clear-records')
+                    .then(r => r.json())
+                    .then(renderTable)
+                    .catch(err => console.error("清除失敗", err));
+            }
         }
 
         // --- 即時更新邏輯 ---
@@ -164,9 +188,36 @@ String getIndexHTML()
 
         window.onload = function() {
             initChart();
-            fetchRecords(); // 頁面載入時讀取 Flash 裡的紀錄
+            fetchRecords(); 
             fetch('/sync?t=' + Math.floor(Date.now() / 1000));
         };
+        function setAbsoluteZero() {
+        // 增加一個確認步驟，防止誤觸
+        const code = prompt("【工程師校正】請確認秤盤已完全清空，並輸入 'RESET' 執行絕對零點校正：");
+        
+        if (code === "RESET") {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = "校正中...";
+            btn.disabled = true;
+
+            // 使用 fetch 在背景發送請求，不跳轉頁面
+            fetch('/set-zero')
+                .then(response => response.text())
+                .then(data => {
+                    alert("絕對零點校正成功！新 Offset 已存入 Flash。");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                })
+                .catch(err => {
+                    alert("校正失敗，請檢查連線");
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                });
+        } else if (code !== null) {
+            alert("指令錯誤，校正取消。");
+        }
+    }
     </script>
 </body>
 </html>

@@ -62,3 +62,24 @@ void deleteRecordFromStorage(int index)
     array.remove(index);
     saveJsonToFile(doc);
 }
+
+void clearRecordsInStorage() {
+    JsonDocument doc;
+    doc.to<JsonArray>(); // 建立一個空的陣列
+    saveJsonToFile(doc);
+}
+
+// 儲存絕對零點
+void saveAbsoluteOffset(long offset) {
+    JsonDocument doc;
+    deserializeJson(doc, getRecordsJson()); // 取得現有資料
+    doc["offset"] = offset; // 加入或更新 offset
+    saveJsonToFile(doc);
+}
+
+// 取得絕對零點
+long getAbsoluteOffset() {
+    JsonDocument doc;
+    deserializeJson(doc, getRecordsJson());
+    return doc["offset"] | 0; // 如果沒存過，預設為 0
+}

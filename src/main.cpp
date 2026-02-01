@@ -10,8 +10,10 @@ void setup()
 {
     Serial.begin(115200);
     initStorage();
+    long offset = getAbsoluteOffset();
+
     initWiFi();
-    initSensor();
+    initSensor(offset);
     initWebRoutes(server);
 }
 
