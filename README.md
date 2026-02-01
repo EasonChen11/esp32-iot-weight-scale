@@ -306,5 +306,6 @@ platformio device monitor --baud 115200
 [issues-shield]: https://img.shields.io/github/issues/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
 [issues-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/issues
 
-[license-shield]: https://img.shields.io/github/license/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge
+<!-- [license-shield]: https://img.shields.io/github/license/EasonChen11/esp32-iot-weight-scale.svg?style=for-the-badge／ -->
+[license-shield]: https://img.shields.io/badge/license-MIT-blue.svg?style=for-the-badge
 [license-url]: https://github.com/EasonChen11/esp32-iot-weight-scale/blob/main/LICENSE
