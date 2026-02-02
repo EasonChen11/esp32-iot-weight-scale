@@ -18,5 +18,5 @@ const int LOADCELL_SCK_PIN = 19;  // Clock signal pin
 /**
  * Sensor Simulation Mode and Calibration
  */
-#define SIMULATE_SENSOR false         
+#define SIMULATE_SENSOR true         
 const float LOADCELL_SCALE_FACTOR = 420.0;
