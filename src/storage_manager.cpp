@@ -1,4 +1,5 @@
 #include "storage_manager.h"
+#include "config.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <Preferences.h>
@@ -91,7 +92,7 @@ void addRecordToStorage(String time, String weight)
   nextArray.add(newEntry);
   for (JsonVariant v : array)
   {
-    if (nextArray.size() < 10)
+    if (nextArray.size() < MAX_RECORDS)
       nextArray.add(v);
   }
   saveJsonToFile(nextDoc);

@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 static HX711 scale;
-static float internal_cached_weight = 0.0;
+volatile float internal_cached_weight = 0.0;
 static unsigned long last_read_time = 0;
 
 #if SIMULATE_SENSOR
