@@ -46,8 +46,8 @@ Perfect for applications such as:
 
 | Component | GPIO Pin |
 |-----------|----------|
-| HX711 DT (Data Out) | GPIO 18 |
-| HX711 SCK (Serial Clock) | GPIO 19 |
+| HX711 DT (Data Out) | GPIO 21 |
+| HX711 SCK (Serial Clock) | GPIO 22 |
 
 ## Software Stack
 
@@ -81,15 +81,15 @@ Perfect for applications such as:
    const char *const WIFI_PASS = "Your_Network_Password";
    
    // GPIO pins for your hardware
-   const int LOADCELL_DOUT_PIN = 18;
-   const int LOADCELL_SCK_PIN = 19;
+   const int LOADCELL_DOUT_PIN = 21;
+   const int LOADCELL_SCK_PIN = 22;
    ```
 
 3. **Calibrate the sensor**
 
    Update the scale factor in `config.h`:
    ```cpp
-   const float LOADCELL_SCALE_FACTOR = 420.0;
+   const float LOADCELL_SCALE_FACTOR = 85000.0;
    ```
    
    To calibrate:
@@ -155,10 +155,10 @@ Establishes WiFi connectivity via:
 
 #### Storage Manager
 Manages persistent data with:
-- JSON-formatted measurement records
-- Timestamp integration
-- Calibration offset storage
-- SPIFFS filesystem abstraction
+- JSON-formatted measurement records stored in SPIFFS
+- Timestamp integration for each measurement
+- Calibration offset storage using Preferences API
+- Efficient key-value storage for configuration data
 
 #### Web Server Logic
 RESTful API endpoints for:
@@ -207,7 +207,7 @@ const char *const WIFI_PASS = "Your_Network_Password";
 
 ### Sensor Calibration
 ```cpp
-const float LOADCELL_SCALE_FACTOR = 420.0;
+const float LOADCELL_SCALE_FACTOR = 85000.0;
 ```
 
 ### Simulation Mode (Testing)
