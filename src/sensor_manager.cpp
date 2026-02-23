@@ -35,7 +35,7 @@ static float _doRead()
     if (abs(raw) < 0.01)
         raw = 0.0;
 
-    return raw / 1000.0;
+    return raw;
 #endif
 }
 
@@ -52,10 +52,21 @@ Returns:
 */
 void initSensor(long savedOffset)
 {
+    Serial.println("[Sensor] savedOffset: " + String(savedOffset));
 #if !SIMULATE_SENSOR
     scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-    scale.set_scale(LOADCELL_SCALE_FACTOR);
-
+    // scale.set_scale(LOADCELL_SCALE_FACTOR);
+    Serial.println("[Sensor] Initializing weight sensor...");
+    if (scale.wait_ready_timeout(2000)) {
+        scale.set_scale(LOADCELL_SCALE_FACTOR);
+        Serial.println("[Sensor] HX711 is ready and initialized");
+    } else {
+        Serial.println("[Sensor] error: HX711 not found or not responding");
+        // init again with a delay to allow for sensor startup
+        delay(1000);
+        initSensor(savedOffset);
+        return;
+    }
     if (savedOffset != 0)
     {
         scale.set_offset(savedOffset);
@@ -89,6 +100,7 @@ void updateSensor()
     {
         internal_cached_weight = _doRead();
         last_read_time = millis();
+        Serial.printf("[Sensor] New weight reading: %.3f kg\n", internal_cached_weight);
     }
 }
 
@@ -125,7 +137,7 @@ void tareSensor()
     sim_weight = 0.0;
     internal_cached_weight = 0.0;
 #else
-    if (scale.is_ready())
+    if (scale.is_ready() || scale.wait_ready_timeout(2000))
         scale.tare();
 #endif
     Serial.println("[Sensor] Temporary tare performed");
@@ -145,11 +157,13 @@ Returns:
 long captureAbsoluteOffset()
 {
 #if !SIMULATE_SENSOR
-    if (scale.is_ready())
+    if (scale.is_ready() || scale.wait_ready_timeout(2000))
     {
         scale.tare();
+        Serial.println("[Sensor] Capturing absolute offset...");
         return scale.get_offset();
     }
+    Serial.println("[Sensor] Sensor not ready, cannot capture offset");
     return 0;
 #else
     return 123456;

@@ -1,6 +1,7 @@
 #include "storage_manager.h"
 #include <LittleFS.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 
 const char *FILE_PATH = "/records.json";
 
@@ -16,9 +17,9 @@ Returns:
 */
 static void saveJsonToFile(JsonDocument &doc)
 {
-    File file = LittleFS.open(FILE_PATH, "w");
-    serializeJson(doc, file);
-    file.close();
+  File file = LittleFS.open(FILE_PATH, "w");
+  serializeJson(doc, file);
+  file.close();
 }
 
 /*
@@ -34,11 +35,11 @@ Returns:
 */
 void initStorage()
 {
-    if (!LittleFS.begin(true))
-    {
-        Serial.println("LittleFS mount failed");
-        return;
-    }
+  if (!LittleFS.begin(true))
+  {
+    Serial.println("LittleFS mount failed");
+    return;
+  }
 }
 
 /*
@@ -54,12 +55,12 @@ Returns:
 */
 String getRecordsJson()
 {
-    File file = LittleFS.open(FILE_PATH, "r");
-    if (!file || file.size() == 0)
-        return "[]";
-    String content = file.readString();
-    file.close();
-    return content;
+  File file = LittleFS.open(FILE_PATH, "r");
+  if (!file || file.size() == 0)
+    return "[]";
+  String content = file.readString();
+  file.close();
+  return content;
 }
 
 /*
@@ -76,24 +77,24 @@ Returns:
 */
 void addRecordToStorage(String time, String weight)
 {
-    JsonDocument doc;
-    deserializeJson(doc, getRecordsJson());
-    JsonArray array = doc.as<JsonArray>();
+  JsonDocument doc;
+  deserializeJson(doc, getRecordsJson());
+  JsonArray array = doc.as<JsonArray>();
 
-    JsonDocument newEntryDoc;
-    JsonObject newEntry = newEntryDoc.to<JsonObject>();
-    newEntry["time"] = time;
-    newEntry["weight"] = weight;
+  JsonDocument newEntryDoc;
+  JsonObject newEntry = newEntryDoc.to<JsonObject>();
+  newEntry["time"] = time;
+  newEntry["weight"] = weight;
 
-    JsonDocument nextDoc;
-    JsonArray nextArray = nextDoc.to<JsonArray>();
-    nextArray.add(newEntry);
-    for (JsonVariant v : array)
-    {
-        if (nextArray.size() < 10)
-            nextArray.add(v);
-    }
-    saveJsonToFile(nextDoc);
+  JsonDocument nextDoc;
+  JsonArray nextArray = nextDoc.to<JsonArray>();
+  nextArray.add(newEntry);
+  for (JsonVariant v : array)
+  {
+    if (nextArray.size() < 10)
+      nextArray.add(v);
+  }
+  saveJsonToFile(nextDoc);
 }
 
 /*
@@ -108,11 +109,11 @@ Returns:
 */
 void deleteRecordFromStorage(int index)
 {
-    JsonDocument doc;
-    deserializeJson(doc, getRecordsJson());
-    JsonArray array = doc.as<JsonArray>();
-    array.remove(index);
-    saveJsonToFile(doc);
+  JsonDocument doc;
+  deserializeJson(doc, getRecordsJson());
+  JsonArray array = doc.as<JsonArray>();
+  array.remove(index);
+  saveJsonToFile(doc);
 }
 
 /*
@@ -127,9 +128,9 @@ Returns:
 */
 void clearRecordsInStorage()
 {
-    JsonDocument doc;
-    doc.to<JsonArray>();
-    saveJsonToFile(doc);
+  JsonDocument doc;
+  doc.to<JsonArray>();
+  saveJsonToFile(doc);
 }
 
 /*
@@ -145,10 +146,13 @@ Returns:
 */
 void saveAbsoluteOffset(long offset)
 {
-    JsonDocument doc;
-    deserializeJson(doc, getRecordsJson());
-    doc["offset"] = offset;
-    saveJsonToFile(doc);
+  Preferences preferences;
+  // 開啟命名空間 "scale_data"，false 代表可讀寫
+  preferences.begin("scale_data", false);
+  preferences.putLong("offset", offset);
+  preferences.end();
+
+  Serial.printf("[Storage] Absolute offset saved: %ld\n", offset);
 }
 
 /*
@@ -164,7 +168,11 @@ Returns:
 */
 long getAbsoluteOffset()
 {
-    JsonDocument doc;
-    deserializeJson(doc, getRecordsJson());
-    return doc["offset"] | 0;
+  Preferences preferences;
+  // true 代表以唯讀模式開啟
+  preferences.begin("scale_data", true);
+  long offset = preferences.getLong("offset", 0);
+  preferences.end();
+
+  return offset;
 }
