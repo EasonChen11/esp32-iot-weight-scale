@@ -148,7 +148,7 @@ Returns:
 void saveAbsoluteOffset(long offset)
 {
   Preferences preferences;
-  // 開啟命名空間 "scale_data"，false 代表可讀寫
+  // Open namespace "scale_data"; false = read/write mode
   preferences.begin("scale_data", false);
   preferences.putLong("offset", offset);
   preferences.end();
@@ -170,7 +170,7 @@ Returns:
 long getAbsoluteOffset()
 {
   Preferences preferences;
-  // true 代表以唯讀模式開啟
+  // true = open in read-only mode
   preferences.begin("scale_data", true);
   long offset = preferences.getLong("offset", 0);
   preferences.end();
