@@ -18,15 +18,14 @@ const int LOADCELL_SCK_PIN = 22;  // Clock signal pin
 /**
  * Sensor Simulation Mode and Calibration
  */
-#define SIMULATE_SENSOR false         
+#define SIMULATE_SENSOR false
 const float LOADCELL_SCALE_FACTOR = 85000.0;
-
 
 /**
  * auto-recording configuration
  */
-const unsigned long STARTUP_RECORD_DELAY_MS = 10000;  // 開機後多久紀錄第一筆 (毫秒)
-// 如果未來想改回基於 millis 的定時，可以定義這個：
+const unsigned long STARTUP_RECORD_DELAY_MS = 10000; // Delay after boot before first record (milliseconds)
+// If you prefer millis-based scheduling in the future, adjust this value
 const unsigned long AUTO_RECORD_INTERVAL_MS = 3600000;
 
 /**

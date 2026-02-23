@@ -7,26 +7,35 @@
 
 WebServer server(80);
 
-// 1. 定義任務控制句柄 (Task Handle)
+// 1. Define task handle for FreeRTOS task
 TaskHandle_t WebTaskHandle = NULL;
 
-/**
- * 核心 0 的任務函式：處理 WebServer 與 自動紀錄
- * 這些任務涉及 WiFi 封包處理與 LittleFS 檔案寫入，較為耗時
- */
+/*
+WebAndTasksCode
+
+Task function pinned to core 0 that handles the web server and automatic
+logging tasks. These operations may perform network and filesystem I/O and
+should run on the dedicated core.
+
+Parameters:
+  pvParameters (void*): FreeRTOS task parameter (unused)
+
+Returns:
+  void
+*/
 void WebAndTasksCode(void *pvParameters)
 {
-  Serial.printf("[System] Web & Tasks 運行於核心: %d\n", xPortGetCoreID());
+  Serial.printf("[System] Web & Tasks running on core: %d\n", xPortGetCoreID());
 
   for (;;)
   {
-    // 處理網頁請求
+    // Handle incoming HTTP requests
     server.handleClient();
 
-    // 處理每小時/啟動 10 秒的紀錄 (涉及檔案 I/O)
+    // Perform hourly and startup logging (may perform file I/O)
     handleAutoLogging();
 
-    // 關鍵：給予微小的延遲，防止核心 0 的看門狗 (Watchdog) 報錯
+    // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
@@ -35,7 +44,7 @@ void setup()
 {
   Serial.begin(115200);
 
-  // 初始化儲存與感測器
+  // Initialize storage and sensor
   initStorage();
   long offset = getAbsoluteOffset();
 
@@ -43,10 +52,10 @@ void setup()
   initSensor(offset);
   initWebRoutes(server);
 
-  // 初始化自動紀錄服務
+  // Initialize auto logger service
   initAutoLogger();
 
-  // 2. 建立任務並固定在核心 0 (Core 0)
+  // 2. Create task pinned to core 0
   xTaskCreatePinnedToCore(
       WebAndTasksCode, /* 任務函式 */
       "WebAndTasks",   /* 任務名稱 */
@@ -57,12 +66,12 @@ void setup()
       0                /* 固定在核心 0 */
   );
 
-  Serial.println("[System] 系統初始化完成，已進入雙核心模式");
+  Serial.println("[System] System initialization complete, dual-core mode active");
 }
 
 void loop()
 {
-  // 核心 1 (預設核心) 專心執行感測器更新
-  // 這裡沒有任何 delay 或 檔案寫入，讀數反應會變得極快
+  // Core 1 (default core) focuses on sensor updates
+  // There are no delays or file writes here to keep readings responsive
   updateSensor();
 }
