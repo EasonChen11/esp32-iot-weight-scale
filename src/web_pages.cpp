@@ -264,8 +264,23 @@ String getIndexHTML()
         */
         window.onload = function() {
             initChart();
+            
+            // 1. 先抓取一次現有的紀錄 (舊資料)
             fetchRecords(); 
-            fetch('/sync?t=' + Math.floor(Date.now() / 1000));
+
+            // 2. 獲取當前時間戳並同步
+            const timestamp = Math.floor(Date.now() / 1000);
+            fetch('/sync?t=' + timestamp)
+                .then(response => {
+                    if (response.ok) {
+                        // 3. 關鍵：等待 1.5 秒，讓 ESP32 Core 0 有足夠時間完成檔案寫入
+                        // 這樣「初始紀錄」才會出現在接下來抓取的資料中
+                        setTimeout(fetchRecords, 1500); 
+                    }
+                });
+
+            // 4. 每 60 秒自動刷新一次表格 (為了顯示每小時的自動紀錄)
+            setInterval(fetchRecords, 60000);
         };
     </script>
 </body>

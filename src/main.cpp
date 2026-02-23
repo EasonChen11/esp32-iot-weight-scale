@@ -59,7 +59,7 @@ void setup()
   xTaskCreatePinnedToCore(
       WebAndTasksCode, /* 任務函式 */
       "WebAndTasks",   /* 任務名稱 */
-      8192,            /* 堆疊大小 (Stack size) */
+      16384,            /* 堆疊大小 (Stack size) */
       NULL,            /* 傳入參數 */
       1,               /* 優先級 */
       &WebTaskHandle,  /* 任務句柄 */
