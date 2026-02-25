@@ -44,10 +44,16 @@ Perfect for applications such as:
 
 ### Pin Configuration
 
-| Component | GPIO Pin |
-|-----------|----------|
-| HX711 DT (Data Out) | GPIO 21 |
-| HX711 SCK (Serial Clock) | GPIO 22 |
+Two HX711 modules are supported, each with its own DT and SCK pair.
+The HX711 only requires **DT** and **SCK** for data communication — there is no "ACC" or "CS" pin.
+If the ESP32's 3.3V pin cannot supply enough current for both modules, power each HX711 from an external 3.3V/5V rail (share GND).
+
+| Component | Signal | GPIO Pin |
+|-----------|--------|----------|
+| HX711 #1 (left load cell) | DT (Data Out) | GPIO 21 |
+| HX711 #1 (left load cell) | SCK (Clock) | GPIO 22 |
+| HX711 #2 (right load cell) | DT (Data Out) | GPIO 18 |
+| HX711 #2 (right load cell) | SCK (Clock) | GPIO 19 |
 
 ## Software Stack
 
@@ -79,23 +85,29 @@ Perfect for applications such as:
    ```cpp
    const char *const WIFI_SSID = "Your_Network_SSID";
    const char *const WIFI_PASS = "Your_Network_Password";
-   
-   // GPIO pins for your hardware
-   const int LOADCELL_DOUT_PIN = 21;
-   const int LOADCELL_SCK_PIN = 22;
+
+   // HX711 #1 (left load cell)
+   const int LOADCELL1_DOUT_PIN = 21;
+   const int LOADCELL1_SCK_PIN  = 22;
+
+   // HX711 #2 (right load cell)
+   const int LOADCELL2_DOUT_PIN = 18;
+   const int LOADCELL2_SCK_PIN  = 19;
    ```
 
-3. **Calibrate the sensor**
+3. **Calibrate each sensor independently**
 
-   Update the scale factor in `config.h`:
+   Update the per-sensor scale factors in `config.h`:
    ```cpp
-   const float LOADCELL_SCALE_FACTOR = 85000.0;
+   const float LOADCELL1_SCALE_FACTOR = 85000.0;
+   const float LOADCELL2_SCALE_FACTOR = 85000.0;
    ```
-   
-   To calibrate:
+
+   To calibrate each one:
    - Place a known weight on the load cell
-   - Record the raw ADC reading
-   - Calculate: `scale_factor = raw_reading / known_weight`
+   - Read the raw ADC value from the serial output
+   - Calculate: `scale_factor = raw_reading / known_weight_in_kg`
+   - Update the corresponding `LOADCELL1_SCALE_FACTOR` or `LOADCELL2_SCALE_FACTOR`
 
 4. **Build and Upload**
    ```bash
@@ -179,22 +191,27 @@ RESTful API endpoints for:
 
 ### Web Interface
 
-The dashboard provides:
-- **Live Weight Display**: Current measurement in kg
-- **Data Records Table**: Complete measurement history
-- **Record Management**: Add, delete, or clear records
-- **Calibration Controls**: Tare and offset adjustments
+The dashboard has three panels:
+- **Sensor 1 Panel**: Live weight from the left load cell with real-time chart and tare/calibration controls
+- **Sensor 2 Panel**: Live weight from the right load cell with real-time chart and tare/calibration controls
+- **Total Panel**: Combined (S1 + S2) bee-box weight, data records table, and record management
 
 ### API Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/weight` | Get current weight |
-| GET | `/records` | Fetch all stored records |
-| POST | `/records` | Add new weight record |
-| DELETE | `/records/<id>` | Delete specific record |
-| POST | `/tare` | Reset sensor to zero |
-| POST | `/calibrate` | Update calibration offset |
+| GET | `/data` | Get total weight (S1 + S2) in kg |
+| GET | `/data1` | Get Sensor 1 weight in kg |
+| GET | `/data2` | Get Sensor 2 weight in kg |
+| GET | `/get-records` | Fetch all stored records (JSON) |
+| GET | `/add-record?t=TIME&w=WEIGHT` | Add new weight record |
+| GET | `/del-record?i=INDEX` | Delete record by index |
+| GET | `/clear-records` | Clear all records |
+| GET | `/tare` | Tare both sensors |
+| GET | `/tare1` | Tare Sensor 1 only |
+| GET | `/tare2` | Tare Sensor 2 only |
+| GET | `/set-zero1` | Absolute zero calibration for Sensor 1 |
+| GET | `/set-zero2` | Absolute zero calibration for Sensor 2 |
 
 ## Configuration
 
@@ -205,9 +222,10 @@ const char *const WIFI_SSID = "Your_Network_SSID";
 const char *const WIFI_PASS = "Your_Network_Password";
 ```
 
-### Sensor Calibration
+### Per-Sensor Calibration
 ```cpp
-const float LOADCELL_SCALE_FACTOR = 85000.0;
+const float LOADCELL1_SCALE_FACTOR = 85000.0;  // Left load cell
+const float LOADCELL2_SCALE_FACTOR = 85000.0;  // Right load cell
 ```
 
 ### Simulation Mode (Testing)
