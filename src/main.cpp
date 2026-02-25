@@ -46,10 +46,11 @@ void setup()
 
   // Initialize storage and sensor
   initStorage();
-  long offset = getAbsoluteOffset();
+  long offset1 = getAbsoluteOffset();
+  long offset2 = getAbsoluteOffset2();
 
   initWiFi();
-  initSensor(offset);
+  initSensor(offset1, offset2);
   initWebRoutes(server);
 
   // Initialize auto logger service
