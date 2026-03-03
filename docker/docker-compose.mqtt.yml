@@ -1,0 +1,39 @@
+# ESP32 Weight Scale – MQTT Stack
+#
+# Services:
+#   mosquitto  – MQTT broker (port 1883)
+#   nodered    – Node-RED dashboard (port 1880)
+#
+# Run:
+#   docker compose -f docker/docker-compose.mqtt.yml up -d
+#
+# Dashboard URL:
+#   http://localhost:1880/ui
+#
+# NOTE: This file lives under docker/ and is never touched by PlatformIO.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: esp32-mosquitto
+    ports:
+      - "1883:1883"   # MQTT (TCP)
+      - "9001:9001"   # MQTT over WebSocket (optional)
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  nodered:
+    image: nodered/node-red:latest
+    container_name: esp32-nodered
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - ../nodered_data:/data      # reuse the existing nodered_data folder
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
