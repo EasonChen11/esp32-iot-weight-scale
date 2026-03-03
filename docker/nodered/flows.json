@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Weight Scale",
         "disabled": false,
-        "info": "ESP32 bee-box weight via MQTT"
+        "info": "ESP32 beehive weight via MQTT"
     },
     {
         "id": "mqtt_broker",
@@ -289,7 +289,7 @@
         "width": "3",
         "height": "3",
         "gtype": "gage",
-        "title": "Total (Bee-box)",
+        "title": "Total (Beehive)",
         "label": "kg",
         "format": "{{value | number:3}}",
         "min": 0,
