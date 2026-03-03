@@ -1,16 +1,19 @@
 FROM nodered/node-red:latest
 
-# Install dashboard plugin into Node-RED's own module directory.
-# This avoids conflicts with any node_modules that may exist in the
-# mounted /data volume.
 USER root
+
+# Install node-red-dashboard into Node-RED's own module directory,
+# not /data, so it is always available regardless of volume contents.
 RUN npm install --prefix /usr/src/node-red \
         --no-fund --no-update-notifier \
         node-red-dashboard
 
-# Bake the pre-configured flows into the image.
-# On first start, Node-RED copies /usr/src/node-red/flows.json to /data/flows.json
-# if /data/flows.json does not yet exist.
-COPY flows.json /usr/src/node-red/flows.json
+# Store default flows at a stable non-/data path inside the image.
+COPY flows.json /usr/src/node-red/default_flows.json
+
+# Entrypoint seeds /data/flows.json on first run, then starts Node-RED.
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 USER node-red
+ENTRYPOINT ["/entrypoint.sh"]
