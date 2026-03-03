@@ -4,6 +4,7 @@
 #include "web_server_logic.h"
 #include "storage_manager.h"
 #include "auto_logger.h"
+#include "mqtt_manager.h"
 
 WebServer server(80);
 
@@ -35,6 +36,9 @@ void WebAndTasksCode(void *pvParameters)
     // Perform hourly and startup logging (may perform file I/O)
     handleAutoLogging();
 
+    // Publish weight data to MQTT broker
+    handleMQTT();
+
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -55,6 +59,9 @@ void setup()
 
   // Initialize auto logger service
   initAutoLogger();
+
+  // Initialize MQTT client (connects lazily in handleMQTT)
+  initMQTT();
 
   // 2. Create task pinned to core 0
   xTaskCreatePinnedToCore(
