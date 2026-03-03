@@ -2,3 +2,7 @@
 .vscode
 .github
 nodered_data
+
+# Mosquitto runtime files (written by root inside Docker container)
+docker/mosquitto/data/
+docker/mosquitto/log/
