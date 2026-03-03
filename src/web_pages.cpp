@@ -2,7 +2,7 @@
 
 /*
 Generate the complete HTML content for the main dashboard page.
-Three panels: Sensor 1, Sensor 2, and Total (bee-box) weight.
+Three panels: Sensor 1, Sensor 2, and Total (beehive) weight.
 Each panel has a live chart; the Total panel also has the records table.
 */
 String getIndexHTML()
@@ -13,7 +13,7 @@ String getIndexHTML()
 <head>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta charset='UTF-8'>
-    <title>ESP32 Bee Box Weight Monitor</title>
+    <title>ESP32 Beehive Weight Monitor</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { box-sizing: border-box; }
@@ -144,7 +144,7 @@ String getIndexHTML()
         <!-- ── Total panel ─────────────────────────────────────────── -->
         <div class="card">
             <h1>Total Weight</h1>
-            <div class="subtitle">Bee box (S1 + S2)</div>
+            <div class="subtitle">Beehive (S1 + S2)</div>
             <div id="weightTotal" class="weight-display tot-color">0.00</div>
             <div class="unit">kg</div>
             <div class="chart-container">

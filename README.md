@@ -2,7 +2,7 @@
 
 # ESP32 IoT Weight Scale
 
-A WiFi-enabled bee-box weight monitoring system using ESP32 and dual HX711 load cell sensors.
+A WiFi-enabled beehive weight monitoring system using ESP32 and dual HX711 load cell sensors.
 Weight data is streamed live to an MQTT broker and visualised in a Node-RED dashboard on your PC.
 
 [![MIT License][license-shield]][license-url]
@@ -19,7 +19,7 @@ and publishes the individual and combined weight values to an MQTT broker every 
 A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visualise the data in real time.
 
 ### Use cases
-- Smart bee-box weight tracking
+- Smart beehive weight tracking
 - Dual-sensor IoT scales
 - Agricultural monitoring
 - Laboratory weighing
@@ -143,7 +143,7 @@ Navigate to **http://localhost:1880/ui** in your browser.
 You will see:
 - **Sensor 1 (Left)** gauge – live weight from the left load cell
 - **Sensor 2 (Right)** gauge – live weight from the right load cell
-- **Total (Bee-box)** gauge + numeric readout – combined weight
+- **Total (Beehive)** gauge + numeric readout – combined weight
 - **History Chart** – scrolling 6-hour line graph of total weight
 
 ### MQTT topics published by the ESP32
