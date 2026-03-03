@@ -9,7 +9,10 @@
 # Node-RED connects to mosquitto internally via the Docker network on port 1883.
 # The ESP32 firmware must use MQTT_BROKER_PORT = 1884 (set in include/config.h).
 #
-# Run:
+# First run (builds the Node-RED image with dashboard plugin):
+#   docker compose -f docker/docker-compose.mqtt.yml up -d --build
+#
+# Subsequent runs (uses cached image):
 #   docker compose -f docker/docker-compose.mqtt.yml up -d
 #
 # Dashboard URL:
@@ -31,7 +34,7 @@ services:
     restart: unless-stopped
 
   nodered:
-    image: nodered/node-red:latest
+    build: ./nodered          # custom image with node-red-dashboard pre-installed
     container_name: esp32-nodered
     ports:
       - "1880:1880"
