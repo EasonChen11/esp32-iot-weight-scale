@@ -32,7 +32,7 @@ const char *const WIFI_PASS = AP_WIFI_PASS;
  *   weight-scale/total    – combined weight  (kg)
  */
 const char *const MQTT_BROKER_IP   = "YOUR_AP_PASS";   // PC fixed IP on NOL_WIFI
-const int         MQTT_BROKER_PORT = 1883;
+const int         MQTT_BROKER_PORT = 1884;             // host port mapped in docker-compose.mqtt.yml
 const char *const MQTT_CLIENT_ID   = "esp32-weight-scale";
 const char *const MQTT_TOPIC_SENSOR1 = "weight-scale/sensor1";
 const char *const MQTT_TOPIC_SENSOR2 = "weight-scale/sensor2";

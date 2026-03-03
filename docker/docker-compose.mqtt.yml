@@ -1,8 +1,13 @@
 # ESP32 Weight Scale – MQTT Stack
 #
 # Services:
-#   mosquitto  – MQTT broker (port 1883)
+#   mosquitto  – MQTT broker  host:1884 → container:1883
 #   nodered    – Node-RED dashboard (port 1880)
+#
+# Port 1884 is used on the host to avoid conflicts with other MQTT brokers
+# (e.g. an existing broker already mapped to host port 1885).
+# Node-RED connects to mosquitto internally via the Docker network on port 1883.
+# The ESP32 firmware must use MQTT_BROKER_PORT = 1884 (set in include/config.h).
 #
 # Run:
 #   docker compose -f docker/docker-compose.mqtt.yml up -d
@@ -17,8 +22,8 @@ services:
     image: eclipse-mosquitto:2
     container_name: esp32-mosquitto
     ports:
-      - "1883:1883"   # MQTT (TCP)
-      - "9001:9001"   # MQTT over WebSocket (optional)
+      - "1884:1883"   # MQTT (TCP)  host 1884 → container 1883
+      - "9002:9001"   # MQTT over WebSocket  host 9002 → container 9001
     volumes:
       - ./mosquitto/config:/mosquitto/config:ro
       - ./mosquitto/data:/mosquitto/data
