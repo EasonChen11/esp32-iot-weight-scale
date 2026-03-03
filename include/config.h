@@ -13,7 +13,7 @@
  * Fallback AP: If STA connection fails, the ESP32 starts a soft-AP so you can
  * still reach the web interface (MQTT will be unavailable in that case).
  */
-const char *const STA_WIFI_SSID = "NOL_WIFI";       // Your home/lab network SSID
+const char *const STA_WIFI_SSID = "YOUR_AP_PASS";       // Your home/lab network SSID
 const char *const STA_WIFI_PASS = "YOUR_AP_PASS";      // Your home/lab network password
 const char *const AP_WIFI_SSID  = "ESP32_Weight_Scale"; // Fallback AP SSID
 const char *const AP_WIFI_PASS  = "YOUR_AP_PASS";        // Fallback AP password

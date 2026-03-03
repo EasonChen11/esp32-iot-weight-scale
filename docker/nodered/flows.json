@@ -44,7 +44,16 @@
                 "edited": false
             },
             "themeState": {
-                "base-color": { "default": "#0094CE", "value": "#0094CE", "edited": false }
+                "base-font":                     { "default": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif", "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif", "edited": false },
+                "base-color":                    { "default": "#0094CE", "value": "#0094CE", "edited": false },
+                "page-titlebar-backgroundColor": { "value": "#0094CE",  "edited": false },
+                "page-backgroundColor":          { "value": "#fafafa",  "edited": false },
+                "page-sidebar-backgroundColor":  { "value": "#ffffff",  "edited": false },
+                "group-textColor":               { "value": "#000000",  "edited": false },
+                "group-borderColor":             { "value": "#ffffff",  "edited": false },
+                "group-backgroundColor":         { "value": "#ffffff",  "edited": false },
+                "widget-textColor":              { "value": "#111111",  "edited": false },
+                "widget-backgroundColor":        { "value": "#0094CE",  "edited": false }
             },
             "angularTheme": {
                 "primary": "indigo", "accents": "blue",
