@@ -32,7 +32,7 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 - **MQTT Publishing**: Live weight streamed to a broker at 5-second intervals
 - **Node-RED Dashboard**: Real-time gauges and history chart at `http://localhost:1880/ui`
 - **Web Interface**: Built-in HTTP dashboard at the ESP32's IP address
-- **OLED Display**: SSD1306 screen shows live weight; button cycles Sensor 1 / Sensor 2 / Total
+- **OLED Display**: SSD1306 screen auto-cycles Total (5 s) → Sensor 1 (2 s) → Sensor 2 (2 s)
 - **Auto-Logging**: Hourly weight records stored on LittleFS
 - **Sensor Calibration**: Per-sensor tare and absolute zero-point management
 - **Simulation Mode**: Full test coverage without physical hardware
@@ -59,8 +59,8 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 | SSD1306 OLED | SCL | **5** | Custom I2C — GPIO 22 is taken by HX711 |
 | SSD1306 OLED | VCC | **15** | GPIO used as power supply — no free 3.3V/5V pin needed |
 | SSD1306 OLED | GND | GND | |
-| Next mode button | Signal | **32** | Active LOW; other side to GND |
-| Prev mode button | Signal | **35** | Active LOW; other side to GND — **needs external 10kΩ pull-up to 3.3V** |
+| *(future)* Wake button | Signal | **32** | Reserved for deep-sleep wake-up (`DEEP_SLEEP_ENABLED`) |
+| *(future)* Wake button | GND | **33** | Reserved — will be set OUTPUT LOW as button GND |
 
 > HX711 only needs **DT** and **SCK** — there is no ACC/CS pin.
 >
@@ -68,9 +68,9 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 > The SSD1306 draws ~20 mA, which is within the ESP32 GPIO 40 mA limit.
 > This avoids using the 3.3 V and 5 V rails, which are already occupied by the two HX711 modules.
 >
-> **Buttons:** GPIO 32 has an internal pull-up (no extra resistor needed). GPIO 35 is input-only with no internal pull-up — wire a **10kΩ resistor between GPIO 35 and 3.3V**, then connect the button between GPIO 35 and GND.
-> - GPIO 32 → cycles **forward** (Total → Sensor 1 → Sensor 2 → Total)
-> - GPIO 35 → cycles **backward** (Total → Sensor 2 → Sensor 1 → Total)
+> **OLED display** auto-cycles through views automatically — no button required:
+> Total (5 s) → Sensor 1 (2 s) → Sensor 2 (2 s) → repeat.
+> Timing is adjustable via `OLED_TOTAL_SHOW_MS` / `OLED_SENSOR_SHOW_MS` in `config.h`.
 
 ---
 
@@ -103,12 +103,14 @@ Enable or disable each subsystem at the top of `config.h`:
 #define WEB_SERVER_ENABLED  true   // HTTP web UI on port 80
 #define MQTT_ENABLED        true   // Publish weight to MQTT broker
 #define AUTO_LOGGER_ENABLED true   // Hourly LittleFS logging
-#define OLED_ENABLED        true   // SSD1306 OLED display + mode button
+#define OLED_ENABLED        true   // SSD1306 OLED display (auto-cycles Total/S1/S2)
+#define DEEP_SLEEP_ENABLED  false  // ESP32 deep sleep + button wake-up (future)
 #define SIMULATE_SENSOR     false  // Use fake sensor data (no hardware needed)
 ```
 
 > **Note:** `WEB_SERVER_ENABLED` and `MQTT_ENABLED` both require `WIFI_ENABLED true`.
 > `OLED_ENABLED` requires an SSD1306 OLED wired to GPIO 4 (SDA) and GPIO 5 (SCL). See [Pin Configuration](#pin-configuration).
+> `DEEP_SLEEP_ENABLED` is a planned feature — see `include/deep_sleep_manager.h`.
 
 #### Credentials & addresses
 
