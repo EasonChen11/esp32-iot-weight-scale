@@ -14,7 +14,7 @@ String getIndexHTML()
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta charset='UTF-8'>
     <title>ESP32 Beehive Weight Monitor</title>
-    <script src="/chartjs"></script>
+    <script src="/chartjs" defer></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; text-align: center;
