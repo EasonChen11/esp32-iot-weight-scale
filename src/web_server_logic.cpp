@@ -5,10 +5,12 @@
 #include "sensor_manager.h"
 #include "storage_manager.h"
 #include <time.h>
+#include <LittleFS.h>
 
 /*
 Initialize and register all HTTP routes for the web server.
 Endpoints:
+  Static  : /chartjs  (Chart.js from LittleFS — cached 24 h)
   Data    : /, /data, /data1, /data2, /get-records
   Control : /tare1, /tare2, /tare, /sync, /add-record, /del-record,
             /clear-records, /set-zero1, /set-zero2
@@ -18,6 +20,20 @@ void initWebRoutes(WebServer &server)
     // Root: serve the main dashboard
     server.on("/", [&server]()
               { server.send(200, "text/html", getIndexHTML()); });
+
+    // Chart.js served locally from LittleFS (no CDN — works in AP mode)
+    // Browser caches for 24 h so subsequent loads are instant
+    server.on("/chartjs", [&server]()
+              {
+                  File f = LittleFS.open("/chart.min.js", "r");
+                  if (!f) {
+                      server.send(404, "text/plain", "chart.min.js not found — run Upload Filesystem Image");
+                      return;
+                  }
+                  server.sendHeader("Cache-Control", "max-age=86400");
+                  server.streamFile(f, "application/javascript");
+                  f.close();
+              });
 
     // ── Weight data endpoints ──────────────────────────────────────────
 

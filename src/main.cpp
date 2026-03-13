@@ -59,11 +59,6 @@ void WebAndTasksCode(void *pvParameters)
     handleMQTT();
 #endif
 
-#if OLED_ENABLED
-    // Update OLED display and poll mode button
-    handleOLED();
-#endif
-
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -114,7 +109,10 @@ void setup()
 
 void loop()
 {
-  // Core 1 (default core) focuses on sensor updates
-  // There are no delays or file writes here to keep readings responsive
+  // Core 1: sensor reads + OLED (neither needs network)
+  // Keeping OLED here frees Core 0 entirely for web + MQTT
   updateSensor();
+#if OLED_ENABLED
+  handleOLED();
+#endif
 }
