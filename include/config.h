@@ -5,8 +5,8 @@
 // Feature Switches (true / false)
 // Note: MQTT_ENABLED and WEB_SERVER_ENABLED require WIFI_ENABLED true.
 // =============================================================================
-#define WIFI_ENABLED        false
-#define WEB_SERVER_ENABLED  false
+#define WIFI_ENABLED        true
+#define WEB_SERVER_ENABLED  true
 #define MQTT_ENABLED        false
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED        true
