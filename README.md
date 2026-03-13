@@ -78,6 +78,22 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 
 Edit [`include/config.h`](include/config.h):
 
+#### Feature Switches
+
+Enable or disable each subsystem at the top of `config.h`:
+
+```cpp
+#define WIFI_ENABLED        true   // WiFi STA + AP fallback
+#define WEB_SERVER_ENABLED  true   // HTTP web UI on port 80
+#define MQTT_ENABLED        true   // Publish weight to MQTT broker
+#define AUTO_LOGGER_ENABLED true   // Hourly LittleFS logging
+#define SIMULATE_SENSOR     false  // Use fake sensor data (no hardware needed)
+```
+
+> **Note:** `WEB_SERVER_ENABLED` and `MQTT_ENABLED` both require `WIFI_ENABLED true`.
+
+#### Credentials & addresses
+
 ```cpp
 // WiFi – ESP32 will join this network to reach the MQTT broker
 const char *const STA_WIFI_SSID = "NOL_WIFI";
