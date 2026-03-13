@@ -3,9 +3,9 @@
 #if WIFI_ENABLED
 
 /*
-Initialize and start the WiFi access point.
-This function configures the ESP32 as a WiFi access point with the SSID
-and password defined in config.h, allowing clients to connect wirelessly.
+Initialize WiFi in AP+STA mode (both interfaces active simultaneously).
+  - AP (AP_WIFI_SSID): always on — phones/devices connect here to reach the web server.
+  - STA (STA_WIFI_SSID): joins home network — needed for MQTT broker connectivity.
 
 Parameters:
   none
@@ -14,7 +14,7 @@ Returns:
   void
 
 Example:
-  initWiFi();  // Start WiFi AP with "ESP32_Weight_Scale" SSID
+  initWiFi();  // Start AP hotspot + attempt STA connection for MQTT
 */
 void initWiFi();
 
