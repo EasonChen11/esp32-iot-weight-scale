@@ -3,169 +3,199 @@
 #include "config.h"
 #include <Arduino.h>
 
-static HX711 scale;
-volatile float internal_cached_weight = 0.0;
+static HX711 scale1;
+static HX711 scale2;
+
+volatile float cached_weight1 = 0.0;
+volatile float cached_weight2 = 0.0;
+
 static unsigned long last_read_time = 0;
 
 #if SIMULATE_SENSOR
-static float sim_weight = 0.0;
+static float sim_weight1 = 10.0;
+static float sim_weight2 = 15.0;
 #endif
 
-/*
-Internal function to read weight from the sensor or simulator.
-This is a private helper function that handles both real sensor readings
-and simulated data based on the SIMULATE_SENSOR configuration.
+/* ── Internal readers ─────────────────────────────────────────────────── */
 
-Returns:
-  float: The weight reading in kilograms, or -1.0 if sensor is not ready
-*/
-static float _doRead()
+static float _doRead1()
 {
 #if SIMULATE_SENSOR
-    sim_weight += 0.05;
-    if (sim_weight > 75.0)
-        sim_weight = 10.0;
-    return sim_weight;
+    sim_weight1 += 0.03f;
+    if (sim_weight1 > 50.0f) sim_weight1 = 10.0f;
+    return sim_weight1;
 #else
-    if (!scale.is_ready())
-        return -1.0;
-
-    float raw = scale.get_units(5);
-
-    if (abs(raw) < 0.01)
-        raw = 0.0;
-
+    if (!scale1.is_ready()) return -1.0f;
+    float raw = scale1.get_units(5);
+    if (fabsf(raw) < 0.01f) raw = 0.0f;
     return raw;
 #endif
 }
 
-/*
-Initialize the weight sensor with optional absolute zero offset.
-If no saved offset is provided, the sensor will auto-tare on startup.
-
-Parameters:
-  savedOffset (long): The absolute zero-point offset value to apply.
-                      If 0, the sensor will perform automatic tare. Default is 0.
-
-Returns:
-  void
-*/
-void initSensor(long savedOffset)
+static float _doRead2()
 {
-    Serial.println("[Sensor] savedOffset: " + String(savedOffset));
-#if !SIMULATE_SENSOR
-    scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
-    // scale.set_scale(LOADCELL_SCALE_FACTOR);
-    Serial.println("[Sensor] Initializing weight sensor...");
-    if (scale.wait_ready_timeout(2000)) {
-        scale.set_scale(LOADCELL_SCALE_FACTOR);
-        Serial.println("[Sensor] HX711 is ready and initialized");
-    } else {
-        Serial.println("[Sensor] error: HX711 not found or not responding");
-        // init again with a delay to allow for sensor startup
-        delay(1000);
-        initSensor(savedOffset);
-        return;
-    }
-    if (savedOffset != 0)
-    {
-        scale.set_offset(savedOffset);
-        Serial.printf("[Sensor] Calibration offset applied: %ld\n", savedOffset);
-    }
-    else
-    {
-        scale.tare();
-        Serial.println("[Sensor] No calibration found, performing auto-tare");
-    }
+#if SIMULATE_SENSOR
+    sim_weight2 += 0.07f;
+    if (sim_weight2 > 75.0f) sim_weight2 = 15.0f;
+    return sim_weight2;
 #else
-    Serial.println("[Sensor] Simulation mode activated");
-    sim_weight = 10.0;
+    if (!scale2.is_ready()) return -1.0f;
+    float raw = scale2.get_units(5);
+    if (fabsf(raw) < 0.01f) raw = 0.0f;
+    return raw;
 #endif
 }
 
-/*
-Update the cached weight value at regular 500ms intervals.
-This function should be called continuously in the main loop() to ensure
-fresh weight data is available for retrieval.
+/* ── Public API ───────────────────────────────────────────────────────── */
 
-Parameters:
-  none
+void initSensor(long savedOffset1, long savedOffset2)
+{
+    Serial.printf("[Sensor] Offsets: sensor1=%ld, sensor2=%ld\n", savedOffset1, savedOffset2);
 
-Returns:
-  void
-*/
+#if !SIMULATE_SENSOR
+    // ── Sensor 1 ──────────────────────────────────────────────────────
+    scale1.begin(LOADCELL1_DOUT_PIN, LOADCELL1_SCK_PIN);
+    Serial.println("[Sensor] Initializing sensor 1...");
+    if (scale1.wait_ready_timeout(2000))
+    {
+        scale1.set_scale(LOADCELL1_SCALE_FACTOR);
+        Serial.println("[Sensor] Sensor 1 ready");
+    }
+    else
+    {
+        Serial.println("[Sensor] Error: Sensor 1 not responding — retrying");
+        delay(1000);
+        initSensor(savedOffset1, savedOffset2);
+        return;
+    }
+
+    if (savedOffset1 != 0)
+    {
+        scale1.set_offset(savedOffset1);
+        Serial.printf("[Sensor] Sensor 1 calibration applied: %ld\n", savedOffset1);
+    }
+    else
+    {
+        scale1.tare();
+        Serial.println("[Sensor] Sensor 1 auto-tare");
+    }
+
+    // ── Sensor 2 ──────────────────────────────────────────────────────
+    scale2.begin(LOADCELL2_DOUT_PIN, LOADCELL2_SCK_PIN);
+    Serial.println("[Sensor] Initializing sensor 2...");
+    if (scale2.wait_ready_timeout(2000))
+    {
+        scale2.set_scale(LOADCELL2_SCALE_FACTOR);
+        Serial.println("[Sensor] Sensor 2 ready");
+
+        if (savedOffset2 != 0)
+        {
+            scale2.set_offset(savedOffset2);
+            Serial.printf("[Sensor] Sensor 2 calibration applied: %ld\n", savedOffset2);
+        }
+        else
+        {
+            scale2.tare();
+            Serial.println("[Sensor] Sensor 2 auto-tare");
+        }
+    }
+    else
+    {
+        // Sensor 2 may not be wired yet — warn but do not block startup
+        Serial.println("[Sensor] Warning: Sensor 2 not responding. Check wiring (DT=GPIO18, SCK=GPIO19).");
+    }
+#else
+    Serial.println("[Sensor] Simulation mode: dual sensor active");
+    sim_weight1 = 10.0f;
+    sim_weight2 = 15.0f;
+#endif
+}
+
 void updateSensor()
 {
     if (millis() - last_read_time >= 500)
     {
-        internal_cached_weight = _doRead();
+        cached_weight1 = _doRead1();
+        cached_weight2 = _doRead2();
         last_read_time = millis();
-        Serial.printf("[Sensor] New weight reading: %.3f kg\n", internal_cached_weight);
+        Serial.printf("[Sensor] S1=%.3f kg  S2=%.3f kg  Total=%.3f kg\n",
+                      cached_weight1, cached_weight2,
+                      cached_weight1 + cached_weight2);
     }
 }
 
-/*
-Retrieve the current cached weight value in kilograms.
-This returns the most recently read weight from the sensor buffer,
-updated every 500ms by the updateSensor() function.
+float getCachedWeight1() { return cached_weight1; }
+float getCachedWeight2() { return cached_weight2; }
 
-Parameters:
-  none
-
-Returns:
-  float: The current cached weight in kilograms (kg)
-*/
 float getCachedWeight()
 {
-    return internal_cached_weight;
+    // Returns the summed weight of both sensors (total bee-box weight).
+    // Negative values (sensor not ready) are treated as 0.
+    float w1 = (cached_weight1 > 0.0f) ? cached_weight1 : 0.0f;
+    float w2 = (cached_weight2 > 0.0f) ? cached_weight2 : 0.0f;
+    return w1 + w2;
 }
 
-/*
-Perform temporary tare (zero adjustment) in memory only.
-This zeros out the current weight reading but does not persist
-the absolute offset to storage. Use setAbsoluteZero() for permanent calibration.
-
-Parameters:
-  none
-
-Returns:
-  void
-*/
-void tareSensor()
+void tareSensor1()
 {
 #if SIMULATE_SENSOR
-    sim_weight = 0.0;
-    internal_cached_weight = 0.0;
+    sim_weight1 = 0.0f;
+    cached_weight1 = 0.0f;
 #else
-    if (scale.is_ready() || scale.wait_ready_timeout(2000))
-        scale.tare();
+    if (scale1.is_ready() || scale1.wait_ready_timeout(2000))
+        scale1.tare();
 #endif
-    Serial.println("[Sensor] Temporary tare performed");
+    Serial.println("[Sensor] Sensor 1 tare performed");
 }
 
-/*
-Capture and return the current absolute zero-point offset value.
-This function performs a tare operation and retrieves the raw offset
-value that corresponds to the current zero state of the load cell.
+void tareSensor2()
+{
+#if SIMULATE_SENSOR
+    sim_weight2 = 0.0f;
+    cached_weight2 = 0.0f;
+#else
+    if (scale2.is_ready() || scale2.wait_ready_timeout(2000))
+        scale2.tare();
+#endif
+    Serial.println("[Sensor] Sensor 2 tare performed");
+}
 
-Parameters:
-  none
+void tareSensor()
+{
+    tareSensor1();
+    tareSensor2();
+}
 
-Returns:
-  long: The raw offset value for the current zero state
-*/
-long captureAbsoluteOffset()
+long captureAbsoluteOffset1()
 {
 #if !SIMULATE_SENSOR
-    if (scale.is_ready() || scale.wait_ready_timeout(2000))
+    if (scale1.is_ready() || scale1.wait_ready_timeout(2000))
     {
-        scale.tare();
-        Serial.println("[Sensor] Capturing absolute offset...");
-        return scale.get_offset();
+        scale1.tare();
+        Serial.println("[Sensor] Capturing sensor 1 absolute offset...");
+        return scale1.get_offset();
     }
-    Serial.println("[Sensor] Sensor not ready, cannot capture offset");
+    Serial.println("[Sensor] Sensor 1 not ready, cannot capture offset");
     return 0;
 #else
     return 123456;
 #endif
 }
+
+long captureAbsoluteOffset2()
+{
+#if !SIMULATE_SENSOR
+    if (scale2.is_ready() || scale2.wait_ready_timeout(2000))
+    {
+        scale2.tare();
+        Serial.println("[Sensor] Capturing sensor 2 absolute offset...");
+        return scale2.get_offset();
+    }
+    Serial.println("[Sensor] Sensor 2 not ready, cannot capture offset");
+    return 0;
+#else
+    return 234567;
+#endif
+}
+
+long captureAbsoluteOffset() { return captureAbsoluteOffset1(); }

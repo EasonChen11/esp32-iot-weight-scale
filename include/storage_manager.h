@@ -111,3 +111,14 @@ Example:
   long offset = getAbsoluteOffset();  // Returns stored calibration offset
 */
 long getAbsoluteOffset();
+
+/*
+Save the absolute zero-point offset for sensor 2 to persistent storage.
+*/
+void saveAbsoluteOffset2(long offset);
+
+/*
+Retrieve the saved absolute zero-point offset for sensor 2.
+Returns 0 if not previously set.
+*/
+long getAbsoluteOffset2();
