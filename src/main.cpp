@@ -1,10 +1,15 @@
 #include <Arduino.h>
+#include "config.h"
 #include "wifi_manager.h"
 #include "sensor_manager.h"
 #include "web_server_logic.h"
 #include "storage_manager.h"
+#if AUTO_LOGGER_ENABLED
 #include "auto_logger.h"
+#endif
+#if MQTT_ENABLED
 #include "mqtt_manager.h"
+#endif
 
 WebServer server(80);
 
@@ -33,11 +38,15 @@ void WebAndTasksCode(void *pvParameters)
     // Handle incoming HTTP requests
     server.handleClient();
 
+#if AUTO_LOGGER_ENABLED
     // Perform hourly and startup logging (may perform file I/O)
     handleAutoLogging();
+#endif
 
+#if MQTT_ENABLED
     // Publish weight data to MQTT broker
     handleMQTT();
+#endif
 
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -57,11 +66,13 @@ void setup()
   initSensor(offset1, offset2);
   initWebRoutes(server);
 
-  // Initialize auto logger service
+#if AUTO_LOGGER_ENABLED
   initAutoLogger();
+#endif
 
-  // Initialize MQTT client (connects lazily in handleMQTT)
+#if MQTT_ENABLED
   initMQTT();
+#endif
 
   // 2. Create task pinned to core 0
   xTaskCreatePinnedToCore(

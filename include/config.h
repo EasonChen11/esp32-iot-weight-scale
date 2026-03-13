@@ -3,6 +3,13 @@
 #include <Arduino.h>
 #include <WebServer.h>
 
+// =============================================================================
+// Feature Switches — set to true/false to enable or disable each subsystem
+// =============================================================================
+#define MQTT_ENABLED        true   // Publish weight data to MQTT broker
+#define AUTO_LOGGER_ENABLED true   // Log weight hourly and on startup to LittleFS
+// =============================================================================
+
 /**
  * WiFi Configuration
  *

@@ -1,5 +1,6 @@
 #pragma once
-
+#include "config.h"
+#if AUTO_LOGGER_ENABLED
 #include <Arduino.h>
 
 /*
@@ -28,3 +29,5 @@ Returns:
     void
 */
 void handleAutoLogging();
+
+#endif // AUTO_LOGGER_ENABLED
