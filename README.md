@@ -32,6 +32,7 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 - **MQTT Publishing**: Live weight streamed to a broker at 5-second intervals
 - **Node-RED Dashboard**: Real-time gauges and history chart at `http://localhost:1880/ui`
 - **Web Interface**: Built-in HTTP dashboard at the ESP32's IP address
+- **OLED Display**: SSD1306 screen shows live weight; button cycles Sensor 1 / Sensor 2 / Total
 - **Auto-Logging**: Hourly weight records stored on LittleFS
 - **Sensor Calibration**: Per-sensor tare and absolute zero-point management
 - **Simulation Mode**: Full test coverage without physical hardware
@@ -43,18 +44,33 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 - ESP32 Development Board
 - 2 × HX711 24-bit ADC modules
 - 2 × load cells (5 kg – 50 kg)
+- *(Optional)* SSD1306 0.96" OLED display (I2C)
+- *(Optional)* Tactile push button
 
 ### Pin Configuration
 
-| Component | Signal | GPIO |
-|-----------|--------|------|
-| HX711 #1 (left) | DT | 21 |
-| HX711 #1 (left) | SCK | 22 |
-| HX711 #2 (right) | DT | 18 |
-| HX711 #2 (right) | SCK | 19 |
+| Component | Signal | GPIO | Notes |
+|-----------|--------|------|-------|
+| HX711 #1 (left) | DT | 21 | |
+| HX711 #1 (left) | SCK | 22 | |
+| HX711 #2 (right) | DT | 18 | |
+| HX711 #2 (right) | SCK | 19 | |
+| SSD1306 OLED | SDA | **4** | Custom I2C — GPIO 21 is taken by HX711 |
+| SSD1306 OLED | SCL | **5** | Custom I2C — GPIO 22 is taken by HX711 |
+| SSD1306 OLED | VCC | **15** | GPIO used as power supply — no free 3.3V/5V pin needed |
+| SSD1306 OLED | GND | GND | |
+| Next mode button | Signal | **32** | Active LOW; other side to GND |
+| Prev mode button | Signal | **35** | Active LOW; other side to GND — **needs external 10kΩ pull-up to 3.3V** |
 
 > HX711 only needs **DT** and **SCK** — there is no ACC/CS pin.
-> Power each module from an external 3.3 V / 5 V rail if the ESP32 3V3 pin cannot supply enough current for both.
+>
+> **OLED power:** The OLED VCC is powered from **GPIO 15**, set HIGH in firmware.
+> The SSD1306 draws ~20 mA, which is within the ESP32 GPIO 40 mA limit.
+> This avoids using the 3.3 V and 5 V rails, which are already occupied by the two HX711 modules.
+>
+> **Buttons:** GPIO 32 has an internal pull-up (no extra resistor needed). GPIO 35 is input-only with no internal pull-up — wire a **10kΩ resistor between GPIO 35 and 3.3V**, then connect the button between GPIO 35 and GND.
+> - GPIO 32 → cycles **forward** (Total → Sensor 1 → Sensor 2 → Total)
+> - GPIO 35 → cycles **backward** (Total → Sensor 2 → Sensor 1 → Total)
 
 ---
 
@@ -87,10 +103,12 @@ Enable or disable each subsystem at the top of `config.h`:
 #define WEB_SERVER_ENABLED  true   // HTTP web UI on port 80
 #define MQTT_ENABLED        true   // Publish weight to MQTT broker
 #define AUTO_LOGGER_ENABLED true   // Hourly LittleFS logging
+#define OLED_ENABLED        true   // SSD1306 OLED display + mode button
 #define SIMULATE_SENSOR     false  // Use fake sensor data (no hardware needed)
 ```
 
 > **Note:** `WEB_SERVER_ENABLED` and `MQTT_ENABLED` both require `WIFI_ENABLED true`.
+> `OLED_ENABLED` requires an SSD1306 OLED wired to GPIO 4 (SDA) and GPIO 5 (SCL). See [Pin Configuration](#pin-configuration).
 
 #### Credentials & addresses
 
