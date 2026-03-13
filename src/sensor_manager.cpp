@@ -26,7 +26,7 @@ static float _doRead1()
     return sim_weight1;
 #else
     if (!scale1.is_ready()) return -1.0f;
-    float raw = scale1.get_units(5);
+    float raw = scale1.get_units(3);
     if (fabsf(raw) < 0.01f) raw = 0.0f;
     return raw;
 #endif
@@ -40,7 +40,7 @@ static float _doRead2()
     return sim_weight2;
 #else
     if (!scale2.is_ready()) return -1.0f;
-    float raw = scale2.get_units(5);
+    float raw = scale2.get_units(3);
     if (fabsf(raw) < 0.01f) raw = 0.0f;
     return raw;
 #endif
