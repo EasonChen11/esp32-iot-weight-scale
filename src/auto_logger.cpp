@@ -1,7 +1,8 @@
+#include "config.h"
+#if AUTO_LOGGER_ENABLED
 #include "auto_logger.h"
 #include "sensor_manager.h"
 #include "storage_manager.h"
-#include "config.h"
 #include <time.h>
 
 // State tracking for logging events
@@ -102,3 +103,5 @@ void handleAutoLogging()
         }
     }
 }
+
+#endif // AUTO_LOGGER_ENABLED

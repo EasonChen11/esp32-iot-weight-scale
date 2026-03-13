@@ -1,6 +1,7 @@
+#include "config.h"
+#if WIFI_ENABLED
 #include <WiFi.h>
 #include "wifi_manager.h"
-#include "config.h"
 
 /*
 Initialize WiFi in Station (STA) mode so the ESP32 joins the home/lab network
@@ -49,3 +50,5 @@ void initWiFi()
         Serial.println("[WiFi] WARNING: MQTT unavailable in AP-fallback mode.");
     }
 }
+
+#endif // WIFI_ENABLED
