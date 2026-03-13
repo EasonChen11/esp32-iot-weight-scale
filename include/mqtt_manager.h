@@ -1,4 +1,6 @@
 #pragma once
+#include "config.h"
+#if MQTT_ENABLED
 
 /*
 Initialize the MQTT client and configure the broker endpoint defined in config.h.
@@ -26,3 +28,5 @@ Returns:
   void
 */
 void handleMQTT();
+
+#endif // MQTT_ENABLED

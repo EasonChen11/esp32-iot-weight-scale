@@ -1,8 +1,9 @@
+#include "config.h"
+#if MQTT_ENABLED
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "mqtt_manager.h"
 #include "sensor_manager.h"
-#include "config.h"
 
 static WiFiClient   wifiClient;
 static PubSubClient mqttClient(wifiClient);
@@ -89,3 +90,5 @@ void handleMQTT()
     Serial.printf("[MQTT] Published -> S1=%.3f kg  S2=%.3f kg  Total=%.3f kg\n",
                   getCachedWeight1(), getCachedWeight2(), getCachedWeight());
 }
+
+#endif // MQTT_ENABLED
