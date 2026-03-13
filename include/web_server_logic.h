@@ -1,4 +1,6 @@
 #pragma once
+#include "config.h"
+#if WEB_SERVER_ENABLED
 #include <WebServer.h>
 
 /*
@@ -18,3 +20,5 @@ Example:
   initWebRoutes(server);  // Setup all routes and start server
 */
 void initWebRoutes(WebServer &server);
+
+#endif // WEB_SERVER_ENABLED

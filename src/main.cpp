@@ -1,12 +1,23 @@
 #include <Arduino.h>
-#include "wifi_manager.h"
+#include "config.h"
 #include "sensor_manager.h"
-#include "web_server_logic.h"
 #include "storage_manager.h"
+#if WIFI_ENABLED
+#include "wifi_manager.h"
+#endif
+#if WEB_SERVER_ENABLED
+#include "web_server_logic.h"
+#endif
+#if AUTO_LOGGER_ENABLED
 #include "auto_logger.h"
+#endif
+#if MQTT_ENABLED
 #include "mqtt_manager.h"
+#endif
 
+#if WEB_SERVER_ENABLED
 WebServer server(80);
+#endif
 
 // 1. Define task handle for FreeRTOS task
 TaskHandle_t WebTaskHandle = NULL;
@@ -30,14 +41,20 @@ void WebAndTasksCode(void *pvParameters)
 
   for (;;)
   {
+#if WEB_SERVER_ENABLED
     // Handle incoming HTTP requests
     server.handleClient();
+#endif
 
+#if AUTO_LOGGER_ENABLED
     // Perform hourly and startup logging (may perform file I/O)
     handleAutoLogging();
+#endif
 
+#if MQTT_ENABLED
     // Publish weight data to MQTT broker
     handleMQTT();
+#endif
 
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -53,15 +70,21 @@ void setup()
   long offset1 = getAbsoluteOffset();
   long offset2 = getAbsoluteOffset2();
 
+#if WIFI_ENABLED
   initWiFi();
+#endif
   initSensor(offset1, offset2);
+#if WEB_SERVER_ENABLED
   initWebRoutes(server);
+#endif
 
-  // Initialize auto logger service
+#if AUTO_LOGGER_ENABLED
   initAutoLogger();
+#endif
 
-  // Initialize MQTT client (connects lazily in handleMQTT)
+#if MQTT_ENABLED
   initMQTT();
+#endif
 
   // 2. Create task pinned to core 0
   xTaskCreatePinnedToCore(
