@@ -1,4 +1,6 @@
 #pragma once
+#include "config.h"
+#if WIFI_ENABLED
 
 /*
 Initialize and start the WiFi access point.
@@ -15,3 +17,5 @@ Example:
   initWiFi();  // Start WiFi AP with "ESP32_Weight_Scale" SSID
 */
 void initWiFi();
+
+#endif // WIFI_ENABLED
