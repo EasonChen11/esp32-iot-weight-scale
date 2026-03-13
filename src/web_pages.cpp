@@ -14,7 +14,6 @@ String getIndexHTML()
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta charset='UTF-8'>
     <title>ESP32 Beehive Weight Monitor</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; text-align: center;
@@ -177,37 +176,51 @@ String getIndexHTML()
         const MAX_PTS = 30;
         let chart1, chart2, chartTotal;
 
-        /* ── Chart factory ──────────────────────────────────────────── */
+        /* ── Inline canvas chart (no CDN — works offline / AP mode) ─── */
         function makeChart(id, color) {
-            const ctx = document.getElementById(id).getContext('2d');
-            return new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(MAX_PTS).fill(''),
-                    datasets: [{
-                        data: Array(MAX_PTS).fill(0),
-                        borderColor: color,
-                        backgroundColor: color + '1a',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: false,
-                    scales: { y: { beginAtZero: false, grace: '10%' } },
-                    plugins: { legend: { display: false } }
-                }
+            const canvas = document.getElementById(id);
+            canvas.width  = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            return { canvas, color, data: Array(MAX_PTS).fill(null) };
+        }
+
+        function drawChart(c) {
+            const ctx = c.canvas.getContext('2d');
+            const w = c.canvas.width, h = c.canvas.height;
+            ctx.clearRect(0, 0, w, h);
+            const valid = c.data.filter(v => v !== null);
+            if (valid.length < 2) return;
+            const lo = Math.min(...valid), hi = Math.max(...valid);
+            const range = hi - lo || 0.01;
+            const pad = 6;
+            function pt(i, v) {
+                return { x: (i / (MAX_PTS - 1)) * w,
+                         y: pad + (1 - (v - lo) / range) * (h - pad * 2) };
+            }
+            // collect contiguous segments (skip nulls)
+            const segs = []; let seg = [];
+            c.data.forEach((v, i) => {
+                if (v !== null) seg.push(pt(i, v));
+                else if (seg.length) { segs.push(seg); seg = []; }
+            });
+            if (seg.length) segs.push(seg);
+            segs.forEach(s => {
+                if (s.length < 1) return;
+                ctx.beginPath(); ctx.moveTo(s[0].x, h);
+                s.forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.lineTo(s[s.length-1].x, h); ctx.closePath();
+                ctx.fillStyle = c.color + '33'; ctx.fill();
+                ctx.beginPath(); ctx.moveTo(s[0].x, s[0].y);
+                s.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+                ctx.strokeStyle = c.color; ctx.lineWidth = 2;
+                ctx.lineJoin = 'round'; ctx.stroke();
             });
         }
 
         function pushChart(chart, val) {
-            chart.data.datasets[0].data.push(val);
-            chart.data.datasets[0].data.shift();
-            chart.update();
+            chart.data.push(val);
+            chart.data.shift();
+            drawChart(chart);
         }
 
         /* ── Data polling (500 ms) ──────────────────────────────────── */
