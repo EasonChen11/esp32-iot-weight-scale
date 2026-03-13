@@ -25,6 +25,7 @@ void initOLED()
     delay(10); // let rail stabilise before I2C init
 
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
+    Wire.setClock(400000); // Fast-mode: cuts I2C transfer ~90 ms → ~23 ms
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
     {
