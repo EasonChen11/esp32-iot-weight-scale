@@ -105,9 +105,6 @@ String getIndexHTML()
             <div class="subtitle">Left side load cell</div>
             <div id="weight1" class="weight-display s1-color">0.00</div>
             <div class="unit">kg</div>
-            <div class="chart-container">
-                <canvas id="chart1"></canvas>
-            </div>
             <div class="btn-group">
                 <button class="btn-tare-s1" onclick="tare1()">Tare S1</button>
             </div>
@@ -126,9 +123,6 @@ String getIndexHTML()
             <div class="subtitle">Right side load cell</div>
             <div id="weight2" class="weight-display s2-color">0.00</div>
             <div class="unit">kg</div>
-            <div class="chart-container">
-                <canvas id="chart2"></canvas>
-            </div>
             <div class="btn-group">
                 <button class="btn-tare-s2" onclick="tare2()">Tare S2</button>
             </div>
@@ -175,7 +169,7 @@ String getIndexHTML()
 
     <script>
         const MAX_PTS = 30;
-        let chart1, chart2, chartTotal;
+        let chartTotal;
 
         /* ── Chart factory ──────────────────────────────────────────── */
         function makeChart(id, color) {
@@ -216,17 +210,15 @@ String getIndexHTML()
                 fetch('/data1').then(r => r.text()),
                 fetch('/data2').then(r => r.text())
             ]).then(([d1, d2]) => {
-                const v1    = parseFloat(d1);
-                const v2    = parseFloat(d2);
+                const v1    = parseFloat(d1) || 0;
+                const v2    = parseFloat(d2) || 0;
                 const total = parseFloat((v1 + v2).toFixed(2));
 
                 document.getElementById('weight1').innerText     = v1.toFixed(2);
                 document.getElementById('weight2').innerText     = v2.toFixed(2);
                 document.getElementById('weightTotal').innerText = total.toFixed(2);
 
-                pushChart(chart1,      v1);
-                pushChart(chart2,      v2);
-                pushChart(chartTotal,  total);
+                if (chartTotal) pushChart(chartTotal, total);
             }).catch(() => {});
         }, 500);
 
@@ -304,8 +296,6 @@ String getIndexHTML()
 
         /* ── Init ───────────────────────────────────────────────────── */
         window.onload = function() {
-            chart1      = makeChart('chart1',      '#e67e22');
-            chart2      = makeChart('chart2',      '#3498db');
             chartTotal  = makeChart('chartTotal',  '#27ae60');
 
             fetchRecords();
