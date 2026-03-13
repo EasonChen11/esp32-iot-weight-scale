@@ -1,82 +1,63 @@
 #pragma once
 
 /*
-Initialize the weight sensor with optional absolute zero offset.
-If no saved offset is provided, the sensor will auto-tare on startup.
+Initialize both weight sensors with optional absolute zero offsets.
+If an offset is 0 the corresponding sensor will auto-tare on startup.
 
 Parameters:
-  savedOffset (long): The absolute zero-point offset value to apply.
-                      If 0, the sensor will perform automatic tare. Default is 0.
-
-Returns:
-  void
-
-Example:
-  initSensor(0);          // Auto-tare on startup
-  initSensor(123456);     // Apply saved calibration offset
+  savedOffset1 (long): Calibration offset for sensor 1. Default 0 = auto-tare.
+  savedOffset2 (long): Calibration offset for sensor 2. Default 0 = auto-tare.
 */
-void initSensor(long savedOffset = 0);
+void initSensor(long savedOffset1 = 0, long savedOffset2 = 0);
 
 /*
-Update the cached weight value at regular 500ms intervals.
-This function should be called continuously in the main loop() to ensure
-fresh weight data is available for retrieval.
-
-Parameters:
-  none
-
-Returns:
-  void
-
-Example:
-  updateSensor();  // Call this every iteration of loop()
+Update cached weight values for both sensors at 500ms intervals.
+Call this continuously from loop().
 */
 void updateSensor();
 
 /*
-Retrieve the current cached weight value in kilograms.
-This returns the most recently read weight from the sensor buffer,
-updated every 500ms by the updateSensor() function.
-
-Parameters:
-  none
-
-Returns:
-  float: The current cached weight in kilograms (kg)
-
-Example:
-  float weight = getCachedWeight();  // Returns 2.45 kg
+Return the combined (summed) weight of both sensors in kg.
+Used for total bee-box weight and data logging.
 */
 float getCachedWeight();
 
 /*
-Perform temporary tare (zero adjustment) in memory only.
-This zeros out the current weight reading but does not persist
-the absolute offset to storage. Use setAbsoluteZero() for permanent calibration.
+Return sensor 1 cached weight in kg.
+*/
+float getCachedWeight1();
 
-Parameters:
-  none
+/*
+Return sensor 2 cached weight in kg.
+*/
+float getCachedWeight2();
 
-Returns:
-  void
+/*
+Tare sensor 1 only (temporary, not persisted).
+*/
+void tareSensor1();
 
-Example:
-  tareSensor();  // Zero out the current reading
+/*
+Tare sensor 2 only (temporary, not persisted).
+*/
+void tareSensor2();
+
+/*
+Tare both sensors simultaneously.
 */
 void tareSensor();
 
 /*
-Capture and return the current absolute zero-point offset value.
-This function performs a tare operation and retrieves the raw offset
-value that corresponds to the current zero state of the load cell.
+Capture and return the absolute zero-point offset for sensor 1.
+*/
+long captureAbsoluteOffset1();
 
-Parameters:
-  none
+/*
+Capture and return the absolute zero-point offset for sensor 2.
+*/
+long captureAbsoluteOffset2();
 
-Returns:
-  long: The raw offset value for the current zero state
-
-Example:
-  long offset = captureAbsoluteOffset();  // Returns 123456
+/*
+Alias for captureAbsoluteOffset1() – kept for backward compatibility.
 */
 long captureAbsoluteOffset();
