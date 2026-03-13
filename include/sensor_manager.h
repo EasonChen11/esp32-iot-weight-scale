@@ -18,7 +18,7 @@ void updateSensor();
 
 /*
 Return the combined (summed) weight of both sensors in kg.
-Used for total bee-box weight and data logging.
+Used for total beehive weight and data logging.
 */
 float getCachedWeight();
 

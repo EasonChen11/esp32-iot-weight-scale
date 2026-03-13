@@ -1,0 +1,51 @@
+# ESP32 Weight Scale – MQTT Stack
+#
+# Services:
+#   mosquitto  – MQTT broker  host:1884 → container:1883
+#   nodered    – Node-RED dashboard (port 1880)
+#
+# Port 1884 is used on the host to avoid conflicts with other MQTT brokers
+# (e.g. an existing broker already mapped to host port 1885).
+# Node-RED connects to mosquitto internally via the Docker network on port 1883.
+# The ESP32 firmware must use MQTT_BROKER_PORT = 1884 (set in include/config.h).
+#
+# Start (or restart) the stack:
+#   docker compose -f docker/docker-compose.mqtt.yml up -d
+#
+# First run after a Dockerfile change (rebuilds the image):
+#   docker compose -f docker/docker-compose.mqtt.yml up -d --build
+#
+# Dashboard URL:
+#   http://localhost:1880/ui
+#
+# NOTE: This file lives under docker/ and is never touched by PlatformIO.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: esp32-mosquitto
+    ports:
+      - "1884:1883"   # MQTT (TCP)  host 1884 → container 1883
+      - "9002:9001"   # MQTT over WebSocket  host 9002 → container 9001
+    volumes:
+      - ./mosquitto/config:/mosquitto/config:ro
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  nodered:
+    build: ./nodered          # custom image: node-red-dashboard + flows pre-installed
+    container_name: esp32-nodered
+    ports:
+      - "1880:1880"
+    environment:
+      - TZ=Asia/Taipei
+    volumes:
+      - nodered_data:/data                          # named volume – persists settings/credentials
+      - ./nodered/flows.json:/data/flows.json       # bind-mount so our flows are always loaded
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+volumes:
+  nodered_data:               # Docker-managed volume; persists flow edits across restarts

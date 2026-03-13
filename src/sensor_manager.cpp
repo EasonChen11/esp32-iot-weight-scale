@@ -129,7 +129,7 @@ float getCachedWeight2() { return cached_weight2; }
 
 float getCachedWeight()
 {
-    // Returns the summed weight of both sensors (total bee-box weight).
+    // Returns the summed weight of both sensors (total beehive weight).
     // Negative values (sensor not ready) are treated as 0.
     float w1 = (cached_weight1 > 0.0f) ? cached_weight1 : 0.0f;
     float w2 = (cached_weight2 > 0.0f) ? cached_weight2 : 0.0f;

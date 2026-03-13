@@ -5,9 +5,39 @@
 
 /**
  * WiFi Configuration
+ *
+ * STA mode: ESP32 joins your home/lab network so it can reach the MQTT broker.
+ * The web interface is still accessible at the DHCP-assigned IP shown on the
+ * serial monitor after boot.
+ *
+ * Fallback AP: If STA connection fails, the ESP32 starts a soft-AP so you can
+ * still reach the web interface (MQTT will be unavailable in that case).
  */
-const char *const WIFI_SSID = "ESP32_Weight_Scale";
-const char *const WIFI_PASS = "***REMOVED***";
+const char *const STA_WIFI_SSID = "***REMOVED***";       // Your home/lab network SSID
+const char *const STA_WIFI_PASS = "***REMOVED***";      // Your home/lab network password
+const char *const AP_WIFI_SSID  = "ESP32_Weight_Scale"; // Fallback AP SSID
+const char *const AP_WIFI_PASS  = "***REMOVED***";        // Fallback AP password
+
+// Keep legacy alias so other files that include config.h still compile
+const char *const WIFI_SSID = AP_WIFI_SSID;
+const char *const WIFI_PASS = AP_WIFI_PASS;
+
+/**
+ * MQTT Configuration
+ *
+ * The broker runs on your PC via Docker (docker/docker-compose.mqtt.yml).
+ * Topics published by the ESP32:
+ *   weight-scale/sensor1  – left load cell (kg)
+ *   weight-scale/sensor2  – right load cell (kg)
+ *   weight-scale/total    – combined weight  (kg)
+ */
+const char *const MQTT_BROKER_IP   = "***REMOVED***";   // PC fixed IP on NOL_WIFI
+const int         MQTT_BROKER_PORT = 1884;             // host port mapped in docker-compose.mqtt.yml
+const char *const MQTT_CLIENT_ID   = "esp32-weight-scale";
+const char *const MQTT_TOPIC_SENSOR1 = "weight-scale/sensor1";
+const char *const MQTT_TOPIC_SENSOR2 = "weight-scale/sensor2";
+const char *const MQTT_TOPIC_TOTAL   = "weight-scale/total";
+const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000; // Publish every 5 seconds
 
 /**
  * Hardware Pin Assignments for HX711 Load Cell Sensors
