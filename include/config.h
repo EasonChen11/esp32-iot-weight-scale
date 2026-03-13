@@ -5,7 +5,12 @@
 
 // =============================================================================
 // Feature Switches — set to true/false to enable or disable each subsystem
+//
+// Dependency note:
+//   MQTT_ENABLED and WEB_SERVER_ENABLED both require WIFI_ENABLED true.
 // =============================================================================
+#define WIFI_ENABLED        true   // Connect to WiFi (STA + AP fallback)
+#define WEB_SERVER_ENABLED  true   // Serve the HTTP web UI on port 80
 #define MQTT_ENABLED        true   // Publish weight data to MQTT broker
 #define AUTO_LOGGER_ENABLED true   // Log weight hourly and on startup to LittleFS
 // =============================================================================

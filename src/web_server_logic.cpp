@@ -1,3 +1,5 @@
+#include "config.h"
+#if WEB_SERVER_ENABLED
 #include "web_server_logic.h"
 #include "web_pages.h"
 #include "sensor_manager.h"
@@ -118,3 +120,5 @@ void initWebRoutes(WebServer &server)
 
     server.begin();
 }
+
+#endif // WEB_SERVER_ENABLED
