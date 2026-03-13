@@ -28,11 +28,19 @@ const char *const MQTT_TOPIC_TOTAL   = "weight-scale/total";
 const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000;
 
 // OLED (SSD1306 via I2C — remapped away from HX711 pins)
-const int OLED_SDA_PIN      = 4;
-const int OLED_SCL_PIN      = 5;
-const int OLED_BTN_NEXT_PIN = 32;  // Next mode button  (INPUT_PULLUP, active LOW)
-const int OLED_BTN_PREV_PIN = 35;  // Prev mode button  (input-only — needs external 10kΩ pull-up to 3.3V)
-const int OLED_PWR_PIN      = 15;  // GPIO used as VCC (~20 mA, within 40 mA GPIO limit)
+const int OLED_SDA_PIN  = 4;
+const int OLED_SCL_PIN  = 5;
+const int OLED_PWR_PIN  = 15;  // GPIO used as OLED VCC (~20 mA, within 40 mA GPIO limit)
+
+// OLED auto-cycle timing
+const unsigned long OLED_TOTAL_SHOW_MS  = 5000;  // How long to show Total  (ms)
+const unsigned long OLED_SENSOR_SHOW_MS = 2000;  // How long to show each sensor (ms)
+
+// Deep-sleep + button wake-up (future feature — currently disabled)
+// See include/deep_sleep_manager.h and src/deep_sleep_manager.cpp
+#define DEEP_SLEEP_ENABLED false
+const int WAKE_BTN_PIN = 32;  // Wake-up button signal (INPUT_PULLUP, active LOW — supports ext0)
+const int WAKE_BTN_GND = 33;  // GPIO used as button GND (OUTPUT LOW — button draws only µA)
 
 // HX711 pins  (DT / SCK — no ACC pin)
 const int LOADCELL1_DOUT_PIN = 21;
