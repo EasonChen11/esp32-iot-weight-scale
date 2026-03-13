@@ -14,6 +14,9 @@
 #if MQTT_ENABLED
 #include "mqtt_manager.h"
 #endif
+#if OLED_ENABLED
+#include "oled_manager.h"
+#endif
 
 #if WEB_SERVER_ENABLED
 WebServer server(80);
@@ -56,6 +59,11 @@ void WebAndTasksCode(void *pvParameters)
     handleMQTT();
 #endif
 
+#if OLED_ENABLED
+    // Update OLED display and poll mode button
+    handleOLED();
+#endif
+
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -84,6 +92,10 @@ void setup()
 
 #if MQTT_ENABLED
   initMQTT();
+#endif
+
+#if OLED_ENABLED
+  initOLED();
 #endif
 
   // 2. Create task pinned to core 0
