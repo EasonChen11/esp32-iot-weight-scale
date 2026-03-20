@@ -3,7 +3,7 @@
 # ESP32 IoT Weight Scale
 
 A WiFi-enabled beehive weight monitoring system using ESP32 and dual HX711 load cell sensors.
-Weight data is streamed live to an MQTT broker and visualised in a Node-RED dashboard on your PC.
+Weight data is served on a built-in web dashboard and optionally streamed to an MQTT broker for Node-RED visualisation.
 
 [![MIT License][license-shield]][license-url]
 ![Status](https://img.shields.io/badge/Status-Active-green?style=for-the-badge)
@@ -14,9 +14,9 @@ Weight data is streamed live to an MQTT broker and visualised in a Node-RED dash
 
 ## Overview
 
-The ESP32 connects to your home/lab WiFi network, reads two HX711 load cell sensors (left + right),
-and publishes the individual and combined weight values to an MQTT broker every 5 seconds.
-A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visualise the data in real time.
+The ESP32 reads two HX711 load cell sensors (left + right), displays live weights on an SSD1306 OLED,
+and serves a built-in web dashboard over WiFi. Optionally it publishes to an MQTT broker for
+a Docker-based Node-RED dashboard on your PC.
 
 ### Use cases
 - Smart beehive weight tracking
@@ -28,14 +28,16 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 
 ## Key Features
 
-- **Dual-Sensor Support**: Two independent HX711 load cells with per-sensor calibration
-- **MQTT Publishing**: Live weight streamed to a broker at 5-second intervals
-- **Node-RED Dashboard**: Real-time gauges and history chart at `http://localhost:1880/ui`
-- **Web Interface**: Built-in HTTP dashboard at the ESP32's IP address
-- **OLED Display**: SSD1306 screen auto-cycles Total (5 s) → Sensor 1 (2 s) → Sensor 2 (2 s)
-- **Auto-Logging**: Hourly weight records stored on LittleFS
-- **Sensor Calibration**: Per-sensor tare and absolute zero-point management
-- **Simulation Mode**: Full test coverage without physical hardware
+- **Dual-Sensor Support** — Two independent HX711 load cells with per-sensor calibration
+- **Web Dashboard** — Built-in HTTP dashboard with live charts (Chart.js served from LittleFS, gzipped)
+- **OLED Display** — SSD1306 auto-cycles Total (5 s) → Sensor 1 (2 s) → Sensor 2 (2 s)
+- **Auto-Logging** — Startup + hourly weight records, RAM-cached for fast reads, persisted to LittleFS
+- **MQTT Publishing** — Optional live weight stream to a broker at configurable intervals
+- **Node-RED Dashboard** — Docker stack with Mosquitto + Node-RED for real-time gauges and charts
+- **Sensor Calibration** — Per-sensor tare and absolute zero-point via web endpoints
+- **Time Sync** — Browser sends epoch to ESP32 via `/sync` for accurate record timestamps
+- **Simulation Mode** — Full test coverage without physical hardware
+- **Modular Storage** — Split into LittleFS records, NVS calibration, and init modules
 
 ---
 
@@ -45,7 +47,6 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 - 2 × HX711 24-bit ADC modules
 - 2 × load cells (5 kg – 50 kg)
 - *(Optional)* SSD1306 0.96" OLED display (I2C)
-- *(Optional)* Tactile push button
 
 ### Pin Configuration
 
@@ -83,6 +84,7 @@ A Docker-based stack (Mosquitto + Node-RED) runs on your PC to receive and visua
 | MQTT client | knolleary/PubSubClient |
 | JSON | bblanchon/ArduinoJson 7 |
 | Web server | ESP32 WebServer (port 80) |
+| Charts | Chart.js (served gzipped from LittleFS) |
 | MQTT broker | eclipse-mosquitto 2 (Docker) |
 | Dashboard | Node-RED + node-red-dashboard (Docker) |
 
@@ -101,8 +103,8 @@ Enable or disable each subsystem at the top of `config.h`:
 ```cpp
 #define WIFI_ENABLED        true   // WiFi STA + AP fallback
 #define WEB_SERVER_ENABLED  true   // HTTP web UI on port 80
-#define MQTT_ENABLED        true   // Publish weight to MQTT broker
-#define AUTO_LOGGER_ENABLED true   // Hourly LittleFS logging
+#define MQTT_ENABLED        false  // Publish weight to MQTT broker
+#define AUTO_LOGGER_ENABLED true   // Startup + hourly LittleFS logging
 #define OLED_ENABLED        true   // SSD1306 OLED display (auto-cycles Total/S1/S2)
 #define DEEP_SLEEP_ENABLED  false  // ESP32 deep sleep + button wake-up (future)
 #define SIMULATE_SENSOR     false  // Use fake sensor data (no hardware needed)
@@ -115,26 +117,34 @@ Enable or disable each subsystem at the top of `config.h`:
 #### Credentials & addresses
 
 ```cpp
-// WiFi – ESP32 will join this network to reach the MQTT broker
-const char *const STA_WIFI_SSID = "NOL_WIFI";
+// WiFi – ESP32 will join this network
+const char *const STA_WIFI_SSID = "YOUR_AP_PASS";
 const char *const STA_WIFI_PASS = "YOUR_AP_PASS";
 
-// MQTT broker – fixed IP of your PC on the same network
+// MQTT broker (only needed if MQTT_ENABLED true)
 const char *const MQTT_BROKER_IP = "YOUR_AP_PASS";
+const int         MQTT_BROKER_PORT = 1884;
 
 // Per-sensor calibration
 const float LOADCELL1_SCALE_FACTOR = 85000.0;
 const float LOADCELL2_SCALE_FACTOR = 85000.0;
 ```
 
-### 2. Build and upload
+### 2. Upload the LittleFS filesystem image
+
+Chart.js is served from LittleFS as a gzipped file. Upload it before first use:
 
 ```bash
-# Install PlatformIO if needed: https://platformio.org
+platformio run --target uploadfs --upload-port /dev/ttyUSB0
+```
+
+### 3. Build and upload firmware
+
+```bash
 platformio run --target upload --upload-port /dev/ttyUSB0
 ```
 
-### 3. Monitor serial output
+### 4. Monitor serial output
 
 ```bash
 platformio device monitor --baud 115200
@@ -145,10 +155,42 @@ After boot you will see lines like:
 ```
 [WiFi] Connected! IP: 192.168.1.xxx
 [WiFi] Web interface: http://192.168.1.xxx
-[WiFi] MQTT broker:   YOUR_AP_PASS:1883
-[MQTT] Configured broker: YOUR_AP_PASS:1883
-[MQTT] Published -> S1=12.345 kg  S2=11.890 kg  Total=24.235 kg
+[Storage] Records cache loaded (128 bytes)
+[System] System initialization complete, dual-core mode active
 ```
+
+---
+
+## ESP32 Web Interface
+
+After boot, open `http://<ESP32-IP>` in a browser.
+
+| Panel | Content |
+|-------|---------|
+| Sensor 1 | Live reading + chart + tare/calibration controls |
+| Sensor 2 | Live reading + chart + tare/calibration controls |
+| Total | Combined weight, stored records, record management |
+
+### REST API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Main dashboard (HTML) |
+| GET | `/chartjs` | Chart.js library (gzipped, cached 24 h) |
+| GET | `/data` | Total weight (S1 + S2) in kg |
+| GET | `/data1` | Sensor 1 weight in kg |
+| GET | `/data2` | Sensor 2 weight in kg |
+| GET | `/get-records` | All stored records (JSON) |
+| GET | `/add-record?t=TIME&w=WEIGHT` | Save a record |
+| GET | `/del-record?i=INDEX` | Delete record by index |
+| GET | `/clear-records` | Clear all records |
+| GET | `/tare` | Tare both sensors |
+| GET | `/tare1` | Tare Sensor 1 |
+| GET | `/tare2` | Tare Sensor 2 |
+| GET | `/set-zero1` | Absolute zero calibration — Sensor 1 |
+| GET | `/set-zero2` | Absolute zero calibration — Sensor 2 |
+| GET | `/sync?t=EPOCH` | Sync ESP32 clock from browser |
+| GET | `/time` | Current ESP32 time (HH:MM:SS or "Not synced") |
 
 ---
 
@@ -157,7 +199,8 @@ After boot you will see lines like:
 ### What you need
 
 - Docker and Docker Compose installed on your PC
-- PC fixed IP: `YOUR_AP_PASS` on the `NOL_WIFI` network
+- PC fixed IP: `YOUR_AP_PASS` on the same network as the ESP32
+- `MQTT_ENABLED true` in `config.h`
 
 ### Start the stack
 
@@ -169,7 +212,7 @@ This starts two containers:
 
 | Container | Purpose | Port |
 |-----------|---------|------|
-| `esp32-mosquitto` | MQTT broker | `1883` |
+| `esp32-mosquitto` | MQTT broker | `1884` |
 | `esp32-nodered` | Node-RED dashboard | `1880` |
 
 ### Open the dashboard
@@ -177,10 +220,10 @@ This starts two containers:
 Navigate to **http://localhost:1880/ui** in your browser.
 
 You will see:
-- **Sensor 1 (Left)** gauge – live weight from the left load cell
-- **Sensor 2 (Right)** gauge – live weight from the right load cell
-- **Total (Beehive)** gauge + numeric readout – combined weight
-- **History Chart** – scrolling 6-hour line graph of total weight
+- **Sensor 1 (Left)** gauge — live weight from the left load cell
+- **Sensor 2 (Right)** gauge — live weight from the right load cell
+- **Total (Beehive)** gauge + numeric readout — combined weight
+- **History Chart** — scrolling 6-hour line graph of total weight
 
 ### MQTT topics published by the ESP32
 
@@ -196,10 +239,6 @@ You will see:
 docker compose -f docker/docker-compose.mqtt.yml down
 ```
 
-> **Why is the Docker Compose file in `docker/`?**
-> PlatformIO only compiles files under `src/`, `include/`, `lib/`, and `test/`.
-> Anything in `docker/` is completely ignored by the ESP32 build system.
-
 ---
 
 ## Project Structure
@@ -210,57 +249,66 @@ docker compose -f docker/docker-compose.mqtt.yml down
 │   ├── sensor_manager.h      # Dual HX711 abstraction
 │   ├── wifi_manager.h        # STA/AP WiFi setup
 │   ├── mqtt_manager.h        # MQTT publish manager
-│   ├── storage_manager.h     # LittleFS records
-│   ├── web_server_logic.h    # HTTP REST endpoints
+│   ├── oled_manager.h        # SSD1306 OLED display driver
 │   ├── auto_logger.h         # Hourly weight logger
-│   └── web_pages.h           # Embedded HTML/CSS/JS
+│   ├── deep_sleep_manager.h  # Deep sleep (future)
+│   ├── web_server_logic.h    # HTTP REST endpoints
+│   ├── web_pages.h           # Embedded HTML/CSS/JS
+│   └── storage/
+│       ├── storage_init.h        # LittleFS mount + cache init
+│       ├── littlefs_storage.h    # Records CRUD (RAM-cached)
+│       └── nvs_storage.h         # NVS calibration offsets
 ├── src/
 │   ├── main.cpp              # Entry point, dual-core task setup
 │   ├── sensor_manager.cpp    # HX711 driver (dual sensor)
 │   ├── wifi_manager.cpp      # STA connect + AP fallback
 │   ├── mqtt_manager.cpp      # PubSubClient publish loop
-│   ├── storage_manager.cpp   # LittleFS + Preferences
-│   ├── web_server_logic.cpp  # REST API
-│   ├── auto_logger.cpp       # Hourly auto-record
-│   └── web_pages.cpp         # Web UI assets
+│   ├── oled_manager.cpp      # OLED auto-cycle display
+│   ├── auto_logger.cpp       # Startup + hourly auto-record
+│   ├── deep_sleep_manager.cpp # Deep sleep (future)
+│   ├── web_server_logic.cpp  # REST API routes
+│   ├── web_pages.cpp         # Web UI assets
+│   └── storage/
+│       ├── storage_init.cpp      # Mount LittleFS, load cache
+│       ├── littlefs_storage.cpp  # Records: RAM cache + LittleFS persist
+│       └── nvs_storage.cpp       # Preferences API offsets
+├── data/
+│   └── chart.min.js.gz       # Chart.js (gzipped, uploaded to LittleFS)
 ├── docker/
 │   ├── docker-compose.mqtt.yml   # Mosquitto + Node-RED stack
-│   └── mosquitto/
-│       └── config/
-│           └── mosquitto.conf    # Broker configuration
+│   └── mosquitto/config/
+│       └── mosquitto.conf        # Broker configuration
 ├── nodered_data/             # Node-RED project (flows + dashboard)
+├── .github/workflows/        # CI checks
 └── platformio.ini            # Build configuration
 ```
 
 ---
 
-## ESP32 Web Interface
+## Architecture
 
-The ESP32 also serves a built-in web dashboard.
-After boot, find the IP in the serial output and open `http://<ESP32-IP>` in a browser.
+### Dual-Core Design
 
-| Panel | Content |
-|-------|---------|
-| Sensor 1 | Live reading + chart + tare/calibration controls |
-| Sensor 2 | Live reading + chart + tare/calibration controls |
-| Total | Combined weight, stored records, record management |
+| Core | Task | Details |
+|------|------|---------|
+| Core 1 (`loop()`) | Sensor polling + OLED | `updateSensor()` + `handleOLED()`, 1 ms yield |
+| Core 0 (FreeRTOS task) | Web server + MQTT + auto-logger | 10 ms tick via `vTaskDelay` |
 
-### REST API Endpoints
+### Storage Architecture
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/data` | Total weight (S1 + S2) in kg |
-| GET | `/data1` | Sensor 1 weight in kg |
-| GET | `/data2` | Sensor 2 weight in kg |
-| GET | `/get-records` | All stored records (JSON) |
-| GET | `/add-record?t=TIME&w=WEIGHT` | Save a record |
-| GET | `/del-record?i=INDEX` | Delete record by index |
-| GET | `/clear-records` | Clear all records |
-| GET | `/tare` | Tare both sensors |
-| GET | `/tare1` | Tare Sensor 1 |
-| GET | `/tare2` | Tare Sensor 2 |
-| GET | `/set-zero1` | Absolute zero calibration – Sensor 1 |
-| GET | `/set-zero2` | Absolute zero calibration – Sensor 2 |
+| Module | Backend | Purpose |
+|--------|---------|---------|
+| `littlefs_storage` | LittleFS + RAM cache | Weight records — reads from RAM, writes persist to flash |
+| `nvs_storage` | Preferences (NVS) | Absolute zero calibration offsets |
+| `storage_init` | — | Mounts LittleFS, primes the RAM cache at boot |
+
+### WiFi + MQTT Connection Flow
+
+1. `initWiFi()` attempts STA connection (15 s timeout)
+2. On success: STA IP printed to serial; web server and MQTT become available
+3. On failure: falls back to AP mode (`ESP32_Weight_Scale`) — web UI works, MQTT unavailable
+4. `handleMQTT()` auto-reconnects to the broker with 5 s back-off
+5. Weight values are published every `MQTT_PUBLISH_INTERVAL_MS` (default 5 s)
 
 ---
 
@@ -269,22 +317,21 @@ After boot, find the IP in the serial output and open `http://<ESP32-IP>` in a b
 ### WiFi (STA + AP fallback)
 
 ```cpp
-// include/config.h
-const char *const STA_WIFI_SSID = "NOL_WIFI";          // Primary network
+const char *const STA_WIFI_SSID = "YOUR_AP_PASS";           // Primary network
 const char *const STA_WIFI_PASS = "YOUR_AP_PASS";
-const char *const AP_WIFI_SSID  = "ESP32_Weight_Scale"; // Fallback AP
+const char *const AP_WIFI_SSID  = "ESP32_Weight_Scale";  // Fallback AP
 const char *const AP_WIFI_PASS  = "YOUR_AP_PASS";
 ```
 
 ### MQTT
 
 ```cpp
-const char *const MQTT_BROKER_IP          = "YOUR_AP_PASS";
-const int         MQTT_BROKER_PORT        = 1883;
-const char *const MQTT_CLIENT_ID          = "esp32-weight-scale";
-const char *const MQTT_TOPIC_SENSOR1      = "weight-scale/sensor1";
-const char *const MQTT_TOPIC_SENSOR2      = "weight-scale/sensor2";
-const char *const MQTT_TOPIC_TOTAL        = "weight-scale/total";
+const char *const MQTT_BROKER_IP             = "YOUR_AP_PASS";
+const int         MQTT_BROKER_PORT           = 1884;
+const char *const MQTT_CLIENT_ID             = "esp32-weight-scale";
+const char *const MQTT_TOPIC_SENSOR1         = "weight-scale/sensor1";
+const char *const MQTT_TOPIC_SENSOR2         = "weight-scale/sensor2";
+const char *const MQTT_TOPIC_TOTAL           = "weight-scale/total";
 const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000; // 5 seconds
 ```
 
@@ -300,30 +347,19 @@ Calibration procedure:
 2. Read the raw ADC value from serial output
 3. `scale_factor = raw_reading / known_weight_in_kg`
 
+### Auto-Logger
+
+```cpp
+const unsigned long STARTUP_RECORD_DELAY_MS = 10000;   // Wait 10 s after boot
+const unsigned long AUTO_RECORD_INTERVAL_MS = 3600000; // Hourly
+const int           MAX_RECORDS             = 10;      // Rolling buffer
+```
+
 ### Simulation Mode
 
 ```cpp
 #define SIMULATE_SENSOR true   // Set false for production
 ```
-
----
-
-## Architecture
-
-### Dual-Core Design
-
-| Core | Task |
-|------|------|
-| Core 1 (loop) | Sensor polling – `updateSensor()` every 500 ms |
-| Core 0 (task) | HTTP server + MQTT publish + auto-logger |
-
-### MQTT Connection Flow
-
-1. `initWiFi()` attempts STA connection to `NOL_WIFI` (15 s timeout)
-2. On success: STA IP printed to serial; MQTT becomes available
-3. On failure: falls back to AP mode (MQTT unavailable, web UI still works)
-4. `handleMQTT()` auto-reconnects to the broker with 5 s back-off
-5. Weight values are published every `MQTT_PUBLISH_INTERVAL_MS` (default 5 s)
 
 ---
 
@@ -335,8 +371,10 @@ Calibration procedure:
 | WiFi not connecting | Wrong SSID/password | Update `STA_WIFI_SSID` / `STA_WIFI_PASS` |
 | MQTT failed (rc=-2) | Broker not running | `docker compose -f docker/docker-compose.mqtt.yml up -d` |
 | Dashboard empty | Node-RED not connected to broker | Check that `mosquitto` container is running |
+| Chart not loading | LittleFS not uploaded | Run `platformio run --target uploadfs` |
 | Storage full | Too many records | Clear via `/clear-records` endpoint |
 | Sensor drift | Temperature change | Recalibrate scale factor |
+| Slow page load | Chart.js missing from LittleFS | Upload filesystem image (see step 2) |
 
 ---
 
@@ -346,8 +384,11 @@ Calibration procedure:
 # Build
 platformio run
 
-# Upload
+# Upload firmware
 platformio run --target upload --upload-port /dev/ttyUSB0
+
+# Upload LittleFS filesystem (Chart.js)
+platformio run --target uploadfs --upload-port /dev/ttyUSB0
 
 # Clean build
 platformio run --target clean
@@ -360,7 +401,7 @@ platformio device monitor --baud 115200
 
 <div align="center">
 
-**[⬆ Back to top](#esp32-iot-weight-scale)**
+**[Back to top](#esp32-iot-weight-scale)**
 
 </div>
 
