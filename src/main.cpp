@@ -1,7 +1,8 @@
 #include <Arduino.h>
 #include "config.h"
 #include "sensor_manager.h"
-#include "storage_manager.h"
+#include "storage/storage_init.h"
+#include "storage/nvs_storage.h"
 #if WIFI_ENABLED
 #include "wifi_manager.h"
 #endif
