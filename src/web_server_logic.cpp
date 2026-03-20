@@ -25,12 +25,13 @@ void initWebRoutes(WebServer &server)
     // Browser caches for 24 h so subsequent loads are instant
     server.on("/chartjs", [&server]()
               {
-                  File f = LittleFS.open("/chart.min.js", "r");
+                  File f = LittleFS.open("/chart.min.js.gz", "r");
                   if (!f) {
-                      server.send(404, "text/plain", "chart.min.js not found — run Upload Filesystem Image");
+                      server.send(404, "text/plain", "chart.min.js.gz not found — run Upload Filesystem Image");
                       return;
                   }
                   server.sendHeader("Cache-Control", "max-age=86400");
+                  server.sendHeader("Content-Encoding", "gzip");
                   server.streamFile(f, "application/javascript");
                   f.close();
               });

@@ -115,4 +115,5 @@ void loop()
 #if OLED_ENABLED
   handleOLED();
 #endif
+  delay(1); // yield CPU time so WiFi stack on Core 0 gets more bandwidth
 }
