@@ -3,7 +3,8 @@
 #include "web_server_logic.h"
 #include "web_pages.h"
 #include "sensor_manager.h"
-#include "storage_manager.h"
+#include "storage/littlefs_storage.h"
+#include "storage/nvs_storage.h"
 #include <time.h>
 #include <LittleFS.h>
 
