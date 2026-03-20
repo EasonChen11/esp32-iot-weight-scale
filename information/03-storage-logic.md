@@ -3,21 +3,23 @@
 ## 三種儲存機制
 
 ```
-┌────────────────────────────────────────────────────────────────┐
-│                        儲存架構                                │
-├─────────────┬──────────────────┬───────────────────────────────┤
-│    RAM      │    LittleFS      │         NVS                   │
-│  (記憶體)    │  (Flash 檔案系統) │   (Non-Volatile Storage)      │
-├─────────────┼──────────────────┼───────────────────────────────┤
-│ 斷電消失     │ 斷電保留          │ 斷電保留                      │
-│ 讀寫極快     │ 讀快 寫慢         │ 讀快 寫慢                     │
-│ 容量有限     │ 使用 flash 空間   │ 使用 NVS 分區                 │
-├─────────────┼──────────────────┼───────────────────────────────┤
-│ cached_     │ /records.json    │ scale_data/offset             │
-│  weight1/2  │ /chart.min.js.gz │ scale_data/offset2            │
-│ cachedRec-  │                  │                               │
-│  ordsJson   │                  │                               │
-└─────────────┴──────────────────┴───────────────────────────────┘
+┌───────────────┬──────────────────┬─────────────────────────────┐
+│     RAM       │    LittleFS      │         NVS                 │
+│   (memory)    │  (Flash FS)      │  (Non-Volatile Storage)     │
+├───────────────┼──────────────────┼─────────────────────────────┤
+│ lost on reset │ survives reset   │ survives reset              │
+│ very fast R/W │ fast R, slow W   │ fast R, slow W              │
+│ limited size  │ uses flash space │ uses NVS partition          │
+├───────────────┼──────────────────┼─────────────────────────────┤
+│ cached_       │ /records.json    │ scale_data/offset           │
+│  weight1/2    │ /chart.min.js.gz │ scale_data/offset2          │
+│ cachedRec-    │                  │                             │
+│  ordsJson     │                  │                             │
+└───────────────┴──────────────────┴─────────────────────────────┘
+
+RAM      = cached_weight1/2, cachedRecordsJson (lost on power off)
+LittleFS = /records.json, /chart.min.js.gz   (survives power off)
+NVS      = scale_data/offset, offset2        (survives power off)
 ```
 
 ## 1. RAM — 即時資料
@@ -58,20 +60,20 @@ loadRecordsCache()
   ├─ 檔案不存在或空 → cachedRecordsJson = "[]"
   └─ 正常 → cachedRecordsJson = file.readString()
                                      ↓
-        ┌────────────────────────────────────────────────┐
-        │            之後所有的讀取                        │
-        │                                                │
-        │  getRecordsJson()                              │
-        │    → return cachedRecordsJson   ← 零 Flash I/O  │
-        └────────────────────────────────────────────────┘
-        ┌────────────────────────────────────────────────┐
-        │            寫入（新增/刪除/清空）                 │
-        │                                                │
-        │  1. 解析 cachedRecordsJson → JsonDocument       │
-        │  2. 修改 JSON 陣列                              │
-        │  3. saveJsonToFile(doc) → 寫入 /records.json    │
-        │  4. updateCache(doc)   → 更新 cachedRecordsJson │
-        └────────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────────────┐
+        │  All subsequent reads (zero Flash I/O):          │
+        │                                                  │
+        │  getRecordsJson()                                │
+        │    -> return cachedRecordsJson  (from RAM)        │
+        └──────────────────────────────────────────────────┘
+        ┌──────────────────────────────────────────────────┐
+        │  Writes (add / delete / clear):                   │
+        │                                                  │
+        │  1. deserialize cachedRecordsJson -> JsonDocument │
+        │  2. modify JSON array                            │
+        │  3. saveJsonToFile(doc)  -> write /records.json   │
+        │  4. updateCache(doc)    -> update RAM cache       │
+        └──────────────────────────────────────────────────┘
 ```
 
 ### 新增紀錄的細節 (addRecordToStorage)
