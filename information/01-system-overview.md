@@ -5,22 +5,26 @@
 ESP32 有兩個核心，各自負責不同的工作：
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                     ESP32 雙核心架構                          │
-├──────────────────────────┬───────────────────────────────────┤
-│      Core 1 (loop)       │      Core 0 (FreeRTOS Task)      │
-│                          │                                   │
-│  updateSensor()          │  server.handleClient()  [Web]     │
-│   ↳ 每 500ms 讀 HX711   │  handleAutoLogging()    [Logger]  │
-│   ↳ 結果存 RAM 快取      │  handleMQTT()           [MQTT]   │
-│                          │                                   │
-│  handleOLED()            │  vTaskDelay(10ms)                 │
-│   ↳ 每 200ms 刷新螢幕   │                                   │
-│                          │                                   │
-│  delay(1)  ← 讓出 CPU    │                                   │
-├──────────────────────────┴───────────────────────────────────┤
-│  共享：RAM 快取變數 (volatile float cached_weight1/2)        │
-└──────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│                    ESP32 dual-core layout                  │
+├───────────────────────────┬───────────────────────────────┤
+│      Core 1 (loop)        │    Core 0 (FreeRTOS Task)     │
+│                           │                               │
+│  updateSensor()           │  server.handleClient()  [Web] │
+│    500ms read HX711       │  handleAutoLogging()  [Log]   │
+│    store to RAM cache     │  handleMQTT()         [MQTT]  │
+│                           │                               │
+│  handleOLED()             │  vTaskDelay(10ms)             │
+│    200ms refresh          │                               │
+│                           │                               │
+│  delay(1) -- yield CPU    │                               │
+├───────────────────────────┴───────────────────────────────┤
+│  shared: volatile float cached_weight1 / cached_weight2   │
+└───────────────────────────────────────────────────────────┘
+
+Core 1: sensor polling + OLED (every 500ms read, 200ms refresh)
+Core 0: web server + MQTT + auto-logger (10ms tick)
+shared variable: cached_weight1/2 (volatile, cross-core safe)
 ```
 
 ## 開機流程 (setup)

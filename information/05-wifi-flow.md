@@ -5,20 +5,23 @@
 ESP32 同時開啟兩個 WiFi 介面：
 
 ```
-┌──────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────┐
 │                   WiFi.mode(WIFI_AP_STA)                     │
-├─────────────────────────────┬────────────────────────────────┤
-│      AP 介面 (Soft-AP)       │       STA 介面 (Station)       │
-│                             │                                │
-│  SSID: ESP32_Weight_Scale   │  連接到: ***REMOVED***              │
-│  Pass: ***REMOVED***          │  Pass: ***REMOVED***              │
-│  IP: 192.168.4.1 (固定)     │  IP: DHCP 分配                 │
-│                             │                                │
-│  用途：                      │  用途：                         │
-│  - 手機直連看網頁             │  - 連接 MQTT broker            │
-│  - 沒有路由器也能用           │  - 透過家用網路存取             │
-│  - 永遠開著                  │  - 連不上就放棄（不影響 AP）    │
-└─────────────────────────────┴────────────────────────────────┘
+├────────────────────────────┬────────────────────────────────┤
+│    AP interface (Soft-AP)  │    STA interface (Station)      │
+│                            │                                │
+│  SSID: ESP32_Weight_Scale  │  Connects to: ***REMOVED***         │
+│  Pass: ***REMOVED***         │  Pass: ***REMOVED***              │
+│  IP: 192.168.4.1 (fixed)   │  IP: DHCP assigned             │
+│                            │                                │
+│  Purpose:                  │  Purpose:                       │
+│  - Phone direct connect    │  - Reach MQTT broker            │
+│  - Works without router    │  - Access via home network      │
+│  - Always on               │  - Falls back gracefully        │
+└────────────────────────────┴────────────────────────────────┘
+
+AP (Soft-AP): phone/device direct connect, always on, IP 192.168.4.1
+STA (Station): home WiFi for MQTT, DHCP IP, fallback if unavailable
 ```
 
 ## 初始化流程

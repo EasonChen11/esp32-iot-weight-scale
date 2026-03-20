@@ -64,16 +64,16 @@ updateSensor()
 ## 資料存取方式
 
 ```
-                    Core 1                         Core 0
-              ┌─────────────────┐          ┌─────────────────────┐
-              │  updateSensor() │          │                     │
-              │       │         │          │  getCachedWeight()  │ ← Web API /data
-              │       ▼         │          │  getCachedWeight1() │ ← Web API /data1
-              │  cached_weight1 ├──────────│  getCachedWeight2() │ ← Web API /data2
-              │  cached_weight2 │  volatile│                     │ ← MQTT publish
-              │                 │          │                     │ ← OLED display
-              └─────────────────┘          │                     │ ← Auto-logger
-                                           └─────────────────────┘
+              Core 1                             Core 0
+        ┌───────────────────┐          ┌───────────────────────┐
+        │  updateSensor()   │          │                       │
+        │       |           │          │  getCachedWeight()    │ <- Web /data
+        │       v           │          │  getCachedWeight1()   │ <- Web /data1
+        │  cached_weight1   ├─volatile─│  getCachedWeight2()   │ <- Web /data2
+        │  cached_weight2   │          │                       │ <- MQTT
+        │                   │          │                       │ <- OLED
+        └───────────────────┘          │                       │ <- Auto-logger
+                                       └───────────────────────┘
 ```
 
 - `volatile float` 確保跨核心讀取不會被編譯器優化掉
