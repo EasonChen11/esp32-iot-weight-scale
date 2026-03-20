@@ -121,7 +121,7 @@ initWebRoutes(server)
 │               │               │                   │
 │  12.34 kg     │  11.89 kg     │  24.23 kg         │
 │               │               │  ┌─────────────┐  │
-│  [Tare S1]    │  [Tare S2]    │  │  Line Chart  │  │
+│  [Tare S1]    │  [Tare S2]    │  │  Line Chart │  │
 │               │               │  └─────────────┘  │
 │  > Calibrate  │  > Calibrate  │  [Record Data]    │
 │               │               │                   │

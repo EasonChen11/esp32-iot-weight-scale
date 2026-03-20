@@ -88,11 +88,11 @@ Full cycle = 5 + 2 + 2 = 9 sec
 drawWeight(label, kg)
 
 ┌────────────────────────────────┐
-│ Y=0  label (textSize 2)       │  例："Total"
+│ Y=0  label (textSize 2)        │  例："Total"
 │                                │
 │                                │
-│ Y=22 weight (textSize 3)   kg │  例："24.23"  "kg"
-│                          Y=30 │
+│ Y=22 weight (textSize 3)   kg  │  例："24.23"  "kg"
+│                          Y=30  │
 │                                │
 │                                │
 └────────────────────────────────┘
