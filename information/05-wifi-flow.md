@@ -6,18 +6,18 @@ ESP32 同時開啟兩個 WiFi 介面：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   WiFi.mode(WIFI_AP_STA)                     │
+│                   WiFi.mode(WIFI_AP_STA)                    │
 ├────────────────────────────┬────────────────────────────────┤
-│    AP interface (Soft-AP)  │    STA interface (Station)      │
+│    AP interface (Soft-AP)  │    STA interface (Station)     │
 │                            │                                │
 │  SSID: ESP32_Weight_Scale  │  Connects to: YOUR_AP_PASS         │
 │  Pass: YOUR_AP_PASS         │  Pass: YOUR_AP_PASS              │
 │  IP: 192.168.4.1 (fixed)   │  IP: DHCP assigned             │
 │                            │                                │
-│  Purpose:                  │  Purpose:                       │
-│  - Phone direct connect    │  - Reach MQTT broker            │
-│  - Works without router    │  - Access via home network      │
-│  - Always on               │  - Falls back gracefully        │
+│  Purpose:                  │  Purpose:                      │
+│  - Phone direct connect    │  - Reach MQTT broker           │
+│  - Works without router    │  - Access via home network     │
+│  - Always on               │  - Falls back gracefully       │
 └────────────────────────────┴────────────────────────────────┘
 
 AP (Soft-AP): phone/device direct connect, always on, IP 192.168.4.1

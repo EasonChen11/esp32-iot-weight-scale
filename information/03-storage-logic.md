@@ -64,15 +64,15 @@ loadRecordsCache()
         │  All subsequent reads (zero Flash I/O):          │
         │                                                  │
         │  getRecordsJson()                                │
-        │    -> return cachedRecordsJson  (from RAM)        │
+        │    -> return cachedRecordsJson  (from RAM)       │
         └──────────────────────────────────────────────────┘
         ┌──────────────────────────────────────────────────┐
-        │  Writes (add / delete / clear):                   │
+        │  Writes (add / delete / clear):                  │
         │                                                  │
-        │  1. deserialize cachedRecordsJson -> JsonDocument │
+        │  1. deserialize cachedRecordsJson -> JsonDocument│
         │  2. modify JSON array                            │
-        │  3. saveJsonToFile(doc)  -> write /records.json   │
-        │  4. updateCache(doc)    -> update RAM cache       │
+        │  3. saveJsonToFile(doc)  -> write /records.json  │
+        │  4. updateCache(doc)    -> update RAM cache      │
         └──────────────────────────────────────────────────┘
 ```
 
