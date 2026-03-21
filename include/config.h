@@ -47,11 +47,13 @@ const int         NTP_DAYLIGHT_OFFSET_SEC = 0;
 #define SCHEDULE_ENABLED    true
 const int MAX_SCHEDULE_ENTRIES = 10;
 
-// Deep-sleep + button wake-up (future feature — currently disabled)
+// Deep-sleep + scheduled wake-up
+// Enable to auto-sleep after AWAKE_DURATION_MS and wake at scheduled times.
 // See include/deep_sleep_manager.h and src/deep_sleep_manager.cpp
 #define DEEP_SLEEP_ENABLED false
 const int WAKE_BTN_PIN = 32;  // Wake-up button signal (INPUT_PULLUP, active LOW — supports ext0)
 const int WAKE_BTN_GND = 33;  // GPIO used as button GND (OUTPUT LOW — button draws only µA)
+const unsigned long AWAKE_DURATION_MS = 600000;  // Stay awake 10 min after boot before sleeping
 
 // HX711 pins  (DT / SCK — no ACC pin)
 const int LOADCELL1_DOUT_PIN = 21;

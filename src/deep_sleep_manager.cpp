@@ -4,33 +4,66 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 
-// TODO: define idle timeout in config.h, e.g.:
-//   const unsigned long DEEP_SLEEP_IDLE_MS = 60000; // 1 min
+#if SCHEDULE_ENABLED
+#include "schedule_manager.h"
+#endif
 
-static unsigned long lastActivityMs = 0;
+static unsigned long bootTimeMs = 0;
+static bool sleepTriggered = false;
 
 void initDeepSleep()
 {
-    // Wake-up button: GPIO 32 (INPUT_PULLUP) → ext0 wake on LOW
+    // Button wake-up: GPIO 32 (INPUT_PULLUP), active LOW
     pinMode(WAKE_BTN_GND, OUTPUT);
     digitalWrite(WAKE_BTN_GND, LOW);
     pinMode(WAKE_BTN_PIN, INPUT_PULLUP);
-
-    // Configure ext0 wake-up: wake when WAKE_BTN_PIN goes LOW
     esp_sleep_enable_ext0_wakeup((gpio_num_t)WAKE_BTN_PIN, 0);
 
-    lastActivityMs = millis();
-    Serial.println("[SLEEP] Deep-sleep manager initialized");
+    bootTimeMs = millis();
+    sleepTriggered = false;
+
+    // Log wake-up reason
+    esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
+    switch (cause) {
+        case ESP_SLEEP_WAKEUP_TIMER:
+            Serial.println("[SLEEP] Woke up by timer (scheduled)");
+            break;
+        case ESP_SLEEP_WAKEUP_EXT0:
+            Serial.println("[SLEEP] Woke up by button press");
+            break;
+        default:
+            Serial.println("[SLEEP] Woke up by power-on / reset");
+            break;
+    }
+
+    Serial.printf("[SLEEP] Will stay awake for %lu ms\n", AWAKE_DURATION_MS);
 }
 
 void handleDeepSleep()
 {
-    // TODO: reset lastActivityMs on sensor update or button press
-    // TODO: enter deep sleep after idle timeout:
-    //   if (millis() - lastActivityMs >= DEEP_SLEEP_IDLE_MS) {
-    //       Serial.println("[SLEEP] Entering deep sleep");
-    //       esp_deep_sleep_start();
-    //   }
+    if (sleepTriggered) return;
+    if (millis() - bootTimeMs < AWAKE_DURATION_MS) return;
+
+    // Awake period expired — prepare to sleep
+    sleepTriggered = true;
+
+#if SCHEDULE_ENABLED
+    int seconds = getNextWakeupSeconds();
+    if (seconds > 0) {
+        uint64_t sleepUs = (uint64_t)seconds * 1000000ULL;
+        esp_sleep_enable_timer_wakeup(sleepUs);
+        Serial.printf("[SLEEP] Timer wake-up set: %d seconds (next schedule)\n", seconds);
+    } else {
+        Serial.println("[SLEEP] No schedule entries or time not synced — button wake-up only");
+    }
+#else
+    Serial.println("[SLEEP] No schedule module — button wake-up only");
+#endif
+
+    Serial.println("[SLEEP] Entering deep sleep now...");
+    Serial.flush();
+    delay(100);
+    esp_deep_sleep_start();
 }
 
 #endif // DEEP_SLEEP_ENABLED

@@ -21,6 +21,9 @@
 #if SCHEDULE_ENABLED
 #include "schedule_manager.h"
 #endif
+#if DEEP_SLEEP_ENABLED
+#include "deep_sleep_manager.h"
+#endif
 
 #if WEB_SERVER_ENABLED
 WebServer server(80);
@@ -63,6 +66,10 @@ void WebAndTasksCode(void *pvParameters)
     handleMQTT();
 #endif
 
+#if DEEP_SLEEP_ENABLED
+    handleDeepSleep();
+#endif
+
     // Small delay to avoid watchdog triggers on core 0
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -102,6 +109,10 @@ void setup()
 
 #if SCHEDULE_ENABLED
   initSchedule();
+#endif
+
+#if DEEP_SLEEP_ENABLED
+  initDeepSleep();
 #endif
 
   // 2. Create task pinned to core 0
