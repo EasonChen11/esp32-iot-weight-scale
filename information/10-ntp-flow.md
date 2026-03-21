@@ -19,10 +19,10 @@ ESP32                          NTP 伺服器
   │                                │
   ├─ configTime(28800, 0, ...)  ──→│  設定時區 UTC+8 + 伺服器地址
   │                                │
-  │       ← NTP response ─────────┤  回傳 UTC 時間
+  │       ← NTP response ──────────┤  回傳 UTC 時間
   │                                │
-  ├─ ESP32 內部 RTC 設定為         │
-  │  UTC+8 的當地時間              │
+  ├─ ESP32 內部 RTC 設定為           │
+  │  UTC+8 的當地時間                │
   │                                │
   ▼
 getLocalTime() 開始回傳正確時間
