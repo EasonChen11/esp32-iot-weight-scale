@@ -14,7 +14,6 @@ String getIndexHTML()
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta charset='UTF-8'>
     <title>ESP32 Beehive Weight Monitor</title>
-    <script src="/chartjs" defer></script>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; text-align: center;
@@ -185,6 +184,7 @@ String getIndexHTML()
 
     </div><!-- .grid -->
 
+    <script src="/chartjs"></script>
     <script>
         const MAX_PTS = 30;
         let chartTotal;
@@ -353,11 +353,15 @@ String getIndexHTML()
 
         /* ── Init ───────────────────────────────────────────────────── */
         window.onload = function() {
-            chartTotal  = makeChart('chartTotal',  '#27ae60');
-
-            fetchRecords();
             populateSelects();
             fetchSchedule();
+            fetchRecords();
+
+            if (typeof Chart !== 'undefined') {
+                chartTotal = makeChart('chartTotal', '#27ae60');
+            } else {
+                console.error('Chart.js not loaded — upload LittleFS image');
+            }
 
             const timestamp = Math.floor(Date.now() / 1000);
             fetch('/sync?t=' + timestamp).then(response => {
