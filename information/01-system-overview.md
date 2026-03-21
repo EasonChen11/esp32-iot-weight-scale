@@ -86,21 +86,48 @@ loop() 開始在 Core 1 執行
 
 所有模組都可透過 `config.h` 的 `#define` 獨立開關：
 
+| Switch | 預設 | 開啟效果 | 關閉效果 |
+|--------|------|----------|----------|
+| `WIFI_ENABLED` | `true` | 啟動 AP 熱點 + STA 連線 | **全部網路功能關閉**（Web、MQTT、NTP 都不可用） |
+| `WEB_SERVER_ENABLED` | `true` | 啟動 port 80 Web UI（秤重面板、校正、排程管理、`/sync` 時間同步） | 無 Web 介面，只能靠 OLED 看數值 |
+| `MQTT_ENABLED` | `false` | 每 5 秒發佈 sensor1/sensor2/total 到 MQTT broker | 不發佈，省去需要架 broker 的麻煩 |
+| `AUTO_LOGGER_ENABLED` | `true` | 開機 10 秒後記錄一筆、之後每小時記錄一筆到 LittleFS | 不自動記錄，手動從 Web 按才會記 |
+| `OLED_ENABLED` | `true` | SSD1306 螢幕顯示重量，自動輪播 Total → S1 → S2 | 不驅動 OLED，省電 |
+| `SIMULATE_SENSOR` | `false` | 不讀 HX711，用亂數模擬重量（S1≈25kg, S2≈22kg ±0.5kg） | 讀真實 HX711 感測器 |
+| `NTP_ENABLED` | `true` | STA 連線成功時自動從 NTP server 同步時間 | 不同步，時間靠 `/sync` 或從 0 開始 |
+| `SCHEDULE_ENABLED` | `true` | 可設定每日喚醒時間（NVS 儲存），deep sleep 時用來計算下次喚醒 | 無排程功能，deep sleep 只能靠按鈕喚醒 |
+| `DEEP_SLEEP_ENABLED` | `false` | 開機 10 分鐘後自動進入深度睡眠（~10µA），靠排程/按鈕喚醒 | 永遠保持運行不休眠 |
+
+### 依賴關係圖
+
 ```
-WIFI_ENABLED ──┬── WEB_SERVER_ENABLED
-               ├── MQTT_ENABLED
-               └── NTP_ENABLED
-OLED_ENABLED
-AUTO_LOGGER_ENABLED
-SIMULATE_SENSOR
-SCHEDULE_ENABLED
-DEEP_SLEEP_ENABLED
+WIFI_ENABLED ─┬─► WEB_SERVER_ENABLED
+              ├─► MQTT_ENABLED
+              └─► NTP_ENABLED
+
+SCHEDULE_ENABLED ──► DEEP_SLEEP_ENABLED（排程才有意義）
+
+NTP_ENABLED ──► SCHEDULE_ENABLED（時間準確排程才準）
 ```
 
-相依性：
-- `WEB_SERVER_ENABLED` 和 `MQTT_ENABLED` 需要 `WIFI_ENABLED = true`
-- `NTP_ENABLED` 需要 `WIFI_ENABLED = true`（STA 連線成功才能同步）
-- `DEEP_SLEEP_ENABLED` 搭配 `SCHEDULE_ENABLED` 可定時喚醒，否則僅按鈕喚醒
+### 需要一起開才有意義的組合
+
+| 組合 | 原因 |
+|------|------|
+| `WIFI_ENABLED` + `WEB_SERVER_ENABLED` | Web 需要 WiFi，關 WiFi 開 Web 沒用 |
+| `WIFI_ENABLED` + `MQTT_ENABLED` | MQTT 需要 STA 連到 broker，關 WiFi 開 MQTT 沒用 |
+| `WIFI_ENABLED` + `NTP_ENABLED` | NTP 需要 STA 連網取得時間 |
+| `SCHEDULE_ENABLED` + `DEEP_SLEEP_ENABLED` | 排程是給 deep sleep 計算下次喚醒用的；不開 deep sleep 排程不會觸發動作 |
+| `NTP_ENABLED` + `SCHEDULE_ENABLED` | 排程靠 `getLocalTime()` 計算秒數；沒 NTP 也沒 `/sync` 時間會錯 |
+
+### 單獨開也 OK 的
+
+| Switch | 說明 |
+|--------|------|
+| `OLED_ENABLED` | 獨立運作，不依賴任何其他功能 |
+| `AUTO_LOGGER_ENABLED` | 獨立寫 LittleFS，但沒有 Web 就看不到紀錄 |
+| `SIMULATE_SENSOR` | 純軟體模擬，不需要接 HX711 硬體即可測試 |
+| `DEEP_SLEEP_ENABLED` 不開 `SCHEDULE` | 可以運作，但只能靠**按鈕喚醒**，沒有定時喚醒 |
 
 ## 深度睡眠模式下的運作週期
 
