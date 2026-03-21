@@ -17,7 +17,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 - **Dual HX711 Sensors** — two independent load cells with per-sensor calibration
 - **Web Dashboard** — built-in HTTP UI with live charts (Chart.js from LittleFS)
 - **OLED Display** — SSD1306 auto-cycles Total / Sensor 1 / Sensor 2
-- **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS
+- **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS (hourly disabled in deep sleep mode)
 - **MQTT + Node-RED** — optional live stream to a Docker-based dashboard
 - **NTP Time Sync** — automatic via NTP; browser `/sync` as AP-mode fallback
 - **Scheduled Deep Sleep** — wake at configured times or by button press

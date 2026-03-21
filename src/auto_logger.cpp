@@ -82,7 +82,8 @@ void handleAutoLogging()
         }
     }
 
-    // --- Logic B: Hourly logging ---
+    // --- Logic B: Hourly logging (disabled in deep sleep mode) ---
+#if !DEEP_SLEEP_ENABLED
     if (isTimeSynced)
     {
         if (timeinfo.tm_hour != lastRecordedHour)
@@ -102,6 +103,7 @@ void handleAutoLogging()
             Serial.printf("[AutoLogger] Hourly record saved (%s): %.3f kg\n", timeStr.c_str(), weight);
         }
     }
+#endif
 }
 
 #endif // AUTO_LOGGER_ENABLED
