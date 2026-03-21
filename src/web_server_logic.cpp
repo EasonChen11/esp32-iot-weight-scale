@@ -5,6 +5,9 @@
 #include "sensor_manager.h"
 #include "storage/littlefs_storage.h"
 #include "storage/nvs_storage.h"
+#if SCHEDULE_ENABLED
+#include "schedule_manager.h"
+#endif
 #include <time.h>
 #include <LittleFS.h>
 
@@ -135,6 +138,29 @@ void initWebRoutes(WebServer &server)
                   saveAbsoluteOffset2(newOffset);
                   Serial.printf("[Web] Sensor 2 calibration done. Offset: %ld\n", newOffset);
                   server.send(200, "text/plain", "OK"); });
+
+    // ── Wake-up schedule management ──────────────────────────────────────
+
+#if SCHEDULE_ENABLED
+    server.on("/get-schedule", [&server]()
+              { server.send(200, "application/json", getScheduleJson()); });
+
+    server.on("/add-schedule", [&server]()
+              {
+                  int h = server.arg("h").toInt();
+                  int m = server.arg("m").toInt();
+                  if (addScheduleEntry(h, m)) {
+                      server.send(200, "application/json", getScheduleJson());
+                  } else {
+                      server.send(400, "text/plain", "Invalid or duplicate time");
+                  } });
+
+    server.on("/del-schedule", [&server]()
+              {
+                  int idx = server.arg("i").toInt();
+                  removeScheduleEntry(idx);
+                  server.send(200, "application/json", getScheduleJson()); });
+#endif
 
     server.begin();
 }

@@ -61,6 +61,7 @@ String getIndexHTML()
         .btn-tare-s1  { background-color: #e67e22; }
         .btn-tare-s2  { background-color: #3498db; }
         .btn-record   { background-color: #27ae60; }
+        .btn-sched    { background-color: #9b59b6; }
 
         .btn-clear-all {
             background-color: transparent; color: #95a5a6;
@@ -163,6 +164,23 @@ String getIndexHTML()
                 </table>
                 <button class="btn-clear-all" onclick="clearAll()">Clear All Records</button>
             </div>
+        </div>
+
+        <!-- ── Wake-up Schedule panel ──────────────────────────────── -->
+        <div class="card">
+            <h1>Wake-up Schedule</h1>
+            <div class="subtitle">Daily deep-sleep wake times (max 10)</div>
+
+            <div style="display:flex; gap:8px; justify-content:center; align-items:center; margin:16px 0;">
+                <select id="schedHour" style="padding:8px; border-radius:6px; border:1px solid #ccc; font-size:15px;">
+                </select>
+                <span style="font-size:18px; font-weight:bold;">:</span>
+                <select id="schedMin" style="padding:8px; border-radius:6px; border:1px solid #ccc; font-size:15px;">
+                </select>
+                <button class="btn-sched" onclick="addSchedule()">Add</button>
+            </div>
+
+            <div id="schedList" style="text-align:left; max-width:260px; margin:0 auto;"></div>
         </div>
 
     </div><!-- .grid -->
@@ -294,11 +312,52 @@ String getIndexHTML()
             }
         }
 
+        /* ── Schedule ───────────────────────────────────────────────── */
+        function populateSelects() {
+            const hSel = document.getElementById('schedHour');
+            const mSel = document.getElementById('schedMin');
+            for (let h = 0; h < 24; h++) hSel.innerHTML += '<option value="' + h + '">' + String(h).padStart(2,'0') + '</option>';
+            for (let m = 0; m < 60; m++) mSel.innerHTML += '<option value="' + m + '">' + String(m).padStart(2,'0') + '</option>';
+        }
+
+        function renderSchedule(data) {
+            const items = typeof data === 'string' ? JSON.parse(data) : data;
+            const el = document.getElementById('schedList');
+            if (items.length === 0) { el.innerHTML = '<p style="color:#95a5a6; text-align:center; font-size:13px;">No wake-up times set</p>'; return; }
+            let html = '';
+            items.forEach((s, i) => {
+                const t = String(s.h).padStart(2,'0') + ':' + String(s.m).padStart(2,'0');
+                html += '<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #eee;">'
+                    + '<span style="font-size:18px; font-weight:bold; color:#9b59b6;">' + t + '</span>'
+                    + '<button class="btn-del" onclick="delSchedule(' + i + ')">&#x2715;</button></div>';
+            });
+            el.innerHTML = html;
+        }
+
+        function fetchSchedule() {
+            fetch('/get-schedule').then(r => r.json()).then(renderSchedule);
+        }
+
+        function addSchedule() {
+            const h = document.getElementById('schedHour').value;
+            const m = document.getElementById('schedMin').value;
+            fetch('/add-schedule?h=' + h + '&m=' + m)
+                .then(r => { if (!r.ok) throw new Error('duplicate'); return r.json(); })
+                .then(renderSchedule)
+                .catch(() => alert('Invalid or duplicate time'));
+        }
+
+        function delSchedule(i) {
+            fetch('/del-schedule?i=' + i).then(r => r.json()).then(renderSchedule);
+        }
+
         /* ── Init ───────────────────────────────────────────────────── */
         window.onload = function() {
             chartTotal  = makeChart('chartTotal',  '#27ae60');
 
             fetchRecords();
+            populateSelects();
+            fetchSchedule();
 
             const timestamp = Math.floor(Date.now() / 1000);
             fetch('/sync?t=' + timestamp).then(response => {

@@ -18,6 +18,9 @@
 #if OLED_ENABLED
 #include "oled_manager.h"
 #endif
+#if SCHEDULE_ENABLED
+#include "schedule_manager.h"
+#endif
 
 #if WEB_SERVER_ENABLED
 WebServer server(80);
@@ -95,6 +98,10 @@ void setup()
 
 #if OLED_ENABLED
   initOLED();
+#endif
+
+#if SCHEDULE_ENABLED
+  initSchedule();
 #endif
 
   // 2. Create task pinned to core 0
