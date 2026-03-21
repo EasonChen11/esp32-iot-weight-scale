@@ -75,7 +75,33 @@ getLogTimestamp()
 
 ## 時間同步來源
 
-ESP32 沒有 RTC 電池，開機時不知道現在幾點。時間來源：
+ESP32 沒有 RTC 電池，開機時不知道現在幾點。時間有兩個來源：
+
+### 來源 1：NTP 自動同步（優先）
+
+```
+開機
+  │
+  ▼
+initWiFi() → STA 連線成功
+  │
+  ▼
+initNTP()
+  │
+  ▼
+configTime(28800, 0, "pool.ntp.org", "time.nist.gov")
+  │
+  ▼
+等待最多 5 秒 → getLocalTime() 成功
+  │
+  ▼
+時間已同步，Auto-logger 可以立即開始記錄
+```
+
+- 優點：全自動，不需要開啟網頁
+- 限制：需要 STA WiFi 連線到有網路的路由器
+
+### 來源 2：瀏覽器 /sync 同步（備用）
 
 ```
 瀏覽器開啟網頁
@@ -96,6 +122,23 @@ settimeofday({tv_sec: 1711000000})  ← 設定系統時鐘
 Auto-logger 偵測到時間已同步 → 開始記錄
 ```
 
+- 優點：AP 模式也能使用
+- 限制：需要有人開啟網頁
+
+### 同步順序
+
+```
+情境 A（有 STA WiFi）：
+  NTP 同步成功 → Auto-logger 10 秒後記錄 → 不需開網頁
+
+情境 B（僅 AP 模式）：
+  NTP 跳過 → Auto-logger 等待 → 使用者開網頁 → /sync → 記錄
+
+情境 C（深度睡眠模式 + STA WiFi）：
+  喚醒 → WiFi → NTP → 10 秒後自動記錄 → 10 分鐘後入睡
+  （全自動，無需人工介入）
+```
+
 ## 完整時間線
 
 ```
@@ -105,15 +148,14 @@ Auto-logger 偵測到時間已同步 → 開始記錄
   initAutoLogger()
   bootTime = millis()
   │
+  │  (如果有 STA WiFi) initNTP() → 時間同步成功
+  │
   │  等待 10 秒（STARTUP_RECORD_DELAY_MS）
   │
   ▼ (t=10s)
-  條件滿足：延遲已過
-  但時間可能還沒同步 → 持續等待
+  條件滿足：延遲已過 + 時間已同步（NTP 或 /sync）
   │
-  │  使用者開啟網頁 → /sync 同步時間
-  │
-  ▼ (t=12s, 時間已同步)
+  ▼
   記錄開機紀錄 ← addRecordToStorage("14:30:12", "24.235")
   startupRecordDone = true
   │
