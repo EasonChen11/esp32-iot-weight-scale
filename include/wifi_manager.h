@@ -18,4 +18,8 @@ Example:
 */
 void initWiFi();
 
+#if NTP_ENABLED
+void initNTP();
+#endif
+
 #endif // WIFI_ENABLED

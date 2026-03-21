@@ -36,6 +36,13 @@ const int OLED_PWR_PIN  = 15;  // GPIO used as OLED VCC (~20 mA, within 40 mA GP
 const unsigned long OLED_TOTAL_SHOW_MS  = 5000;  // How long to show Total  (ms)
 const unsigned long OLED_SENSOR_SHOW_MS = 2000;  // How long to show each sensor (ms)
 
+// NTP time synchronization (requires WIFI_ENABLED)
+#define NTP_ENABLED         true
+const char *const NTP_SERVER1            = "pool.ntp.org";
+const char *const NTP_SERVER2            = "time.nist.gov";
+const long        NTP_GMT_OFFSET_SEC     = 28800;   // UTC+8 (Taiwan)
+const int         NTP_DAYLIGHT_OFFSET_SEC = 0;
+
 // Deep-sleep + button wake-up (future feature — currently disabled)
 // See include/deep_sleep_manager.h and src/deep_sleep_manager.cpp
 #define DEEP_SLEEP_ENABLED false
