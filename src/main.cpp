@@ -76,6 +76,9 @@ void setup()
 
 #if WIFI_ENABLED
   initWiFi();
+#if NTP_ENABLED
+  initNTP();
+#endif
 #endif
   initSensor(offset1, offset2);
 #if WEB_SERVER_ENABLED

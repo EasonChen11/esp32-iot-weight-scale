@@ -56,4 +56,35 @@ void initWiFi()
     }
 }
 
+#if NTP_ENABLED
+#include <time.h>
+
+void initNTP()
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("[NTP] Skipped — no STA connection");
+        return;
+    }
+
+    configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
+    Serial.print("[NTP] Synchronizing");
+
+    struct tm timeinfo;
+    int retries = 0;
+    while (!getLocalTime(&timeinfo) && retries < 10) {
+        delay(500);
+        Serial.print(".");
+        retries++;
+    }
+
+    if (getLocalTime(&timeinfo)) {
+        char buf[20];
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        Serial.printf("\n[NTP] Time synced: %s\n", buf);
+    } else {
+        Serial.println("\n[NTP] Sync failed — will rely on browser /sync fallback");
+    }
+}
+#endif // NTP_ENABLED
+
 #endif // WIFI_ENABLED
