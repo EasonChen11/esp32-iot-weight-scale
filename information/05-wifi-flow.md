@@ -10,9 +10,9 @@ ESP32 同時開啟兩個 WiFi 介面：
 ├────────────────────────────┬────────────────────────────────┤
 │    AP interface (Soft-AP)  │    STA interface (Station)     │
 │                            │                                │
-│  SSID: ESP32_Weight_Scale  │  Connects to: ***REMOVED***        │
+│  SSID: ESP32_Weight_Scale  │  Connects to: ***REMOVED***         │
 │  Pass: ***REMOVED***         │  Pass: ***REMOVED***              │
-│  IP: 192.168.4.1 (fixed)  │  IP: DHCP assigned             │
+│  IP: 192.168.4.1 (fixed)   │  IP: DHCP assigned             │
 │                            │                                │
 │  Purpose:                  │  Purpose:                      │
 │  - Phone direct connect    │  - Reach MQTT broker           │

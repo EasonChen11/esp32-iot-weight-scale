@@ -69,14 +69,14 @@ loadRecordsCache()
         │  getRecordsJson()                                │
         │    -> return cachedRecordsJson  (from RAM)       │
         └──────────────────────────────────────────────────┘
-        ┌──────────────────────────────────────────────────┐
-        │  Writes (add / delete / clear):                  │
-        │                                                  │
+        ┌───────────────────────────────────────────────────┐
+        │  Writes (add / delete / clear):                   │
+        │                                                   │
         │  1. deserialize cachedRecordsJson -> JsonDocument │
-        │  2. modify JSON array                            │
-        │  3. saveJsonToFile(doc)  -> write /records.json  │
-        │  4. updateCache(doc)    -> update RAM cache      │
-        └──────────────────────────────────────────────────┘
+        │  2. modify JSON array                             │
+        │  3. saveJsonToFile(doc)  -> write /records.json   │
+        │  4. updateCache(doc)    -> update RAM cache       │
+        └───────────────────────────────────────────────────┘
 ```
 
 ### 新增紀錄的細節 (addRecordToStorage)
