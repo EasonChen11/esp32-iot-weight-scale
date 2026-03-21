@@ -43,6 +43,10 @@ const char *const NTP_SERVER2            = "time.nist.gov";
 const long        NTP_GMT_OFFSET_SEC     = 28800;   // UTC+8 (Taiwan)
 const int         NTP_DAYLIGHT_OFFSET_SEC = 0;
 
+// Wake-up schedule (daily alarm times stored in NVS)
+#define SCHEDULE_ENABLED    true
+const int MAX_SCHEDULE_ENTRIES = 10;
+
 // Deep-sleep + button wake-up (future feature — currently disabled)
 // See include/deep_sleep_manager.h and src/deep_sleep_manager.cpp
 #define DEEP_SLEEP_ENABLED false
