@@ -34,9 +34,16 @@ void initWebRoutes(WebServer &server)
                       server.send(404, "text/plain", "chart.min.js.gz not found — run Upload Filesystem Image");
                       return;
                   }
-                  server.sendHeader("Cache-Control", "max-age=86400");
+                  size_t fileSize = f.size();
+                  server.setContentLength(fileSize);
                   server.sendHeader("Content-Encoding", "gzip");
-                  server.streamFile(f, "application/javascript");
+                  server.sendHeader("Cache-Control", "max-age=86400");
+                  server.send(200, "application/javascript", "");
+                  uint8_t buf[512];
+                  while (f.available()) {
+                      size_t n = f.read(buf, sizeof(buf));
+                      server.client().write(buf, n);
+                  }
                   f.close();
               });
 
