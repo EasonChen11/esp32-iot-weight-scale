@@ -4,6 +4,9 @@
 .github
 nodered_data
 
+# Secrets (WiFi / MQTT credentials)
+include/config_secrets.h
+
 # Mosquitto runtime files (written by root inside Docker container)
 docker/mosquitto/data/
 docker/mosquitto/log/

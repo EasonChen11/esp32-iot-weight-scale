@@ -10,17 +10,13 @@
 #define MQTT_ENABLED        false
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED        true
-#define SIMULATE_SENSOR     false
+#define SIMULATE_SENSOR     true
 
-// WiFi
-const char *const STA_WIFI_SSID = "YOUR_AP_PASS";
-const char *const STA_WIFI_PASS = "YOUR_AP_PASS";
-const char *const AP_WIFI_SSID  = "ESP32_Weight_Scale";
-const char *const AP_WIFI_PASS  = "YOUR_AP_PASS";
+// WiFi & MQTT credentials — kept in a .gitignored file
+// Copy config_secrets.h.example → config_secrets.h and fill in your values
+#include "config_secrets.h"
 
 // MQTT  (broker runs on PC via docker/docker-compose.mqtt.yml)
-const char *const MQTT_BROKER_IP     = "YOUR_AP_PASS";
-const int         MQTT_BROKER_PORT   = 1884;
 const char *const MQTT_CLIENT_ID     = "esp32-weight-scale";
 const char *const MQTT_TOPIC_SENSOR1 = "weight-scale/sensor1";
 const char *const MQTT_TOPIC_SENSOR2 = "weight-scale/sensor2";
@@ -50,7 +46,7 @@ const int MAX_SCHEDULE_ENTRIES = 10;
 // Deep-sleep + scheduled wake-up
 // Enable to auto-sleep after AWAKE_DURATION_MS and wake at scheduled times.
 // See include/deep_sleep_manager.h and src/deep_sleep_manager.cpp
-#define DEEP_SLEEP_ENABLED false
+#define DEEP_SLEEP_ENABLED true
 const int WAKE_BTN_PIN = 32;  // Wake-up button signal (INPUT_PULLUP, active LOW — supports ext0)
 const int WAKE_BTN_GND = 33;  // GPIO used as button GND (OUTPUT LOW — button draws only µA)
 const unsigned long AWAKE_DURATION_MS = 600000;  // Stay awake 10 min after boot before sleeping
