@@ -35,8 +35,10 @@ a Docker-based Node-RED dashboard on your PC.
 - **MQTT Publishing** — Optional live weight stream to a broker at configurable intervals
 - **Node-RED Dashboard** — Docker stack with Mosquitto + Node-RED for real-time gauges and charts
 - **Sensor Calibration** — Per-sensor tare and absolute zero-point via web endpoints
-- **Time Sync** — Browser sends epoch to ESP32 via `/sync` for accurate record timestamps
-- **Simulation Mode** — Full test coverage without physical hardware
+- **NTP Time Sync** — Automatic time via NTP on WiFi connect; browser `/sync` as fallback
+- **Wake-up Schedule** — Set daily wake-up times via web UI, persisted in NVS flash
+- **Scheduled Deep Sleep** — Auto-sleep after 10 min, timer wake at scheduled times + button override
+- **Simulation Mode** — Random-fluctuation test mode without physical hardware
 - **Modular Storage** — Split into LittleFS records, NVS calibration, and init modules
 
 ---
@@ -101,18 +103,21 @@ Edit [`include/config.h`](include/config.h):
 Enable or disable each subsystem at the top of `config.h`:
 
 ```cpp
-#define WIFI_ENABLED        true   // WiFi STA + AP fallback
+#define WIFI_ENABLED        true   // WiFi STA + AP dual mode
 #define WEB_SERVER_ENABLED  true   // HTTP web UI on port 80
 #define MQTT_ENABLED        false  // Publish weight to MQTT broker
 #define AUTO_LOGGER_ENABLED true   // Startup + hourly LittleFS logging
 #define OLED_ENABLED        true   // SSD1306 OLED display (auto-cycles Total/S1/S2)
-#define DEEP_SLEEP_ENABLED  false  // ESP32 deep sleep + button wake-up (future)
-#define SIMULATE_SENSOR     false  // Use fake sensor data (no hardware needed)
+#define NTP_ENABLED         true   // NTP time sync on WiFi connect (UTC+8)
+#define SCHEDULE_ENABLED    true   // Wake-up schedule management (NVS + web UI)
+#define DEEP_SLEEP_ENABLED  false  // Scheduled deep sleep + timer/button wake-up
+#define SIMULATE_SENSOR     false  // Random-fluctuation fake sensor data
 ```
 
 > **Note:** `WEB_SERVER_ENABLED` and `MQTT_ENABLED` both require `WIFI_ENABLED true`.
+> `NTP_ENABLED` requires `WIFI_ENABLED true` (needs STA connection for NTP servers).
+> `DEEP_SLEEP_ENABLED` uses `SCHEDULE_ENABLED` for timer wake-up and `NTP_ENABLED` for time awareness.
 > `OLED_ENABLED` requires an SSD1306 OLED wired to GPIO 4 (SDA) and GPIO 5 (SCL). See [Pin Configuration](#pin-configuration).
-> `DEEP_SLEEP_ENABLED` is a planned feature — see `include/deep_sleep_manager.h`.
 
 #### Credentials & addresses
 
@@ -167,9 +172,10 @@ After boot, open `http://<ESP32-IP>` in a browser.
 
 | Panel | Content |
 |-------|---------|
-| Sensor 1 | Live reading + chart + tare/calibration controls |
-| Sensor 2 | Live reading + chart + tare/calibration controls |
-| Total | Combined weight, stored records, record management |
+| Sensor 1 | Live reading + tare/calibration controls |
+| Sensor 2 | Live reading + tare/calibration controls |
+| Total | Combined weight + chart, stored records, record management |
+| Wake-up Schedule | Add/remove daily wake-up times for deep sleep cycle |
 
 ### REST API Endpoints
 
@@ -191,6 +197,9 @@ After boot, open `http://<ESP32-IP>` in a browser.
 | GET | `/set-zero2` | Absolute zero calibration — Sensor 2 |
 | GET | `/sync?t=EPOCH` | Sync ESP32 clock from browser |
 | GET | `/time` | Current ESP32 time (HH:MM:SS or "Not synced") |
+| GET | `/get-schedule` | Wake-up schedule (JSON array) |
+| GET | `/add-schedule?h=HOUR&m=MIN` | Add a wake-up time |
+| GET | `/del-schedule?i=INDEX` | Remove a wake-up time |
 
 ---
 
@@ -251,7 +260,8 @@ docker compose -f docker/docker-compose.mqtt.yml down
 │   ├── mqtt_manager.h        # MQTT publish manager
 │   ├── oled_manager.h        # SSD1306 OLED display driver
 │   ├── auto_logger.h         # Hourly weight logger
-│   ├── deep_sleep_manager.h  # Deep sleep (future)
+│   ├── deep_sleep_manager.h  # Scheduled deep sleep + wake-up
+│   ├── schedule_manager.h    # Wake-up schedule CRUD (NVS-backed)
 │   ├── web_server_logic.h    # HTTP REST endpoints
 │   ├── web_pages.h           # Embedded HTML/CSS/JS
 │   └── storage/
@@ -265,7 +275,8 @@ docker compose -f docker/docker-compose.mqtt.yml down
 │   ├── mqtt_manager.cpp      # PubSubClient publish loop
 │   ├── oled_manager.cpp      # OLED auto-cycle display
 │   ├── auto_logger.cpp       # Startup + hourly auto-record
-│   ├── deep_sleep_manager.cpp # Deep sleep (future)
+│   ├── deep_sleep_manager.cpp # Scheduled deep sleep + timer/button wake
+│   ├── schedule_manager.cpp  # NVS-backed schedule storage
 │   ├── web_server_logic.cpp  # REST API routes
 │   ├── web_pages.cpp         # Web UI assets
 │   └── storage/
@@ -355,11 +366,46 @@ const unsigned long AUTO_RECORD_INTERVAL_MS = 3600000; // Hourly
 const int           MAX_RECORDS             = 10;      // Rolling buffer
 ```
 
+### NTP Time Sync
+
+```cpp
+#define NTP_ENABLED              true
+const char *const NTP_SERVER1            = "pool.ntp.org";
+const char *const NTP_SERVER2            = "time.nist.gov";
+const long        NTP_GMT_OFFSET_SEC     = 28800;   // UTC+8 (Taiwan)
+const int         NTP_DAYLIGHT_OFFSET_SEC = 0;
+```
+
+### Wake-up Schedule
+
+```cpp
+#define SCHEDULE_ENABLED    true
+const int MAX_SCHEDULE_ENTRIES = 10;   // Max daily wake-up times
+```
+
+Schedule entries are stored in NVS (namespace `schedule`, key `times`) as comma-separated `HH:MM` strings.
+Managed via the web UI's "Wake-up Schedule" panel or REST endpoints.
+
+### Deep Sleep
+
+```cpp
+#define DEEP_SLEEP_ENABLED  false                     // Enable scheduled sleep/wake
+const unsigned long AWAKE_DURATION_MS = 600000;       // Stay awake 10 min after boot
+const int WAKE_BTN_PIN = 32;                          // Button wake-up (ext0, active LOW)
+const int WAKE_BTN_GND = 33;                          // GPIO used as button GND
+```
+
+**Sleep/wake cycle:** Boot → WiFi → NTP sync → log data → serve web UI for 10 min → calculate next scheduled wake time → deep sleep → timer fires → reboot.
+
+If no schedule is set or time is not synced, only button wake-up (GPIO 32) is active.
+
 ### Simulation Mode
 
 ```cpp
 #define SIMULATE_SENSOR true   // Set false for production
 ```
+
+Simulated sensors fluctuate around realistic base weights (S1 ~25 kg, S2 ~22 kg) with ±0.5 kg random noise.
 
 ---
 
