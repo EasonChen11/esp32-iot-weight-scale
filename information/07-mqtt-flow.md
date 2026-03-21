@@ -12,7 +12,7 @@ ESP32                              PC (Docker)
 └──────────────┘            │         │              │
                             │         ▼              │
                             │  Dashboard UI          │
-                            │  http://localhost:1880 │
+                            │  http://localhost:1880  │
                             └────────────────────────┘
 ```
 
