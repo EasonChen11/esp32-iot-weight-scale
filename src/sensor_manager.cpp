@@ -21,8 +21,8 @@ static float sim_weight2 = 15.0;
 static float _doRead1()
 {
 #if SIMULATE_SENSOR
-    sim_weight1 += 0.03f;
-    if (sim_weight1 > 50.0f) sim_weight1 = 10.0f;
+    float noise = (random(-500, 501)) / 1000.0f;   // -0.500 … +0.500 kg
+    sim_weight1 = 25.0f + noise;
     return sim_weight1;
 #else
     if (!scale1.is_ready()) return -1.0f;
@@ -35,8 +35,8 @@ static float _doRead1()
 static float _doRead2()
 {
 #if SIMULATE_SENSOR
-    sim_weight2 += 0.07f;
-    if (sim_weight2 > 75.0f) sim_weight2 = 15.0f;
+    float noise = (random(-500, 501)) / 1000.0f;
+    sim_weight2 = 22.0f + noise;
     return sim_weight2;
 #else
     if (!scale2.is_ready()) return -1.0f;
@@ -105,9 +105,10 @@ void initSensor(long savedOffset1, long savedOffset2)
         Serial.println("[Sensor] Warning: Sensor 2 not responding. Check wiring (DT=GPIO18, SCK=GPIO19).");
     }
 #else
-    Serial.println("[Sensor] Simulation mode: dual sensor active");
-    sim_weight1 = 10.0f;
-    sim_weight2 = 15.0f;
+    Serial.println("[Sensor] Simulation mode: dual sensor active (random)");
+    randomSeed(analogRead(0));
+    sim_weight1 = 25.0f;
+    sim_weight2 = 22.0f;
 #endif
 }
 
