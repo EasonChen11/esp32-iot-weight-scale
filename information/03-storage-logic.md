@@ -13,13 +13,14 @@
 ├───────────────┼──────────────────┼─────────────────────────────┤
 │ cached_       │ /records.json    │ scale_data/offset           │
 │  weight1/2    │ /chart.min.js.gz │ scale_data/offset2          │
-│ cachedRec-    │                  │                             │
+│ cachedRec-    │                  │ schedule/times              │
 │  ordsJson     │                  │                             │
 └───────────────┴──────────────────┴─────────────────────────────┘
 
 RAM      = cached_weight1/2, cachedRecordsJson (lost on power off)
 LittleFS = /records.json, /chart.min.js.gz   (survives power off)
 NVS      = scale_data/offset, offset2        (survives power off)
+           schedule/times                    (survives power off + deep sleep)
 ```
 
 ## 1. RAM — 即時資料
@@ -32,6 +33,8 @@ NVS      = scale_data/offset, offset2        (survives power off)
 | `lastRecordedHour` | auto_logger.cpp | 每小時更新 | auto_logger 自用 | 防止重複記錄 |
 | `bootTime` | auto_logger.cpp | 開機設定 | auto_logger 自用 | 開機時間戳 |
 | `startupRecordDone` | auto_logger.cpp | 開機紀錄完成後 | auto_logger 自用 | 避免重複開機紀錄 |
+| `entries[]` | schedule_manager.cpp | 開機載入 / Web 新增刪除 | deep_sleep_manager | 喚醒排程陣列 |
+| `bootTimeMs` | deep_sleep_manager.cpp | 開機設定 | handleDeepSleep 自用 | 清醒計時起點 |
 
 ## 2. LittleFS — 紀錄持久化
 
@@ -66,14 +69,14 @@ loadRecordsCache()
         │  getRecordsJson()                                │
         │    -> return cachedRecordsJson  (from RAM)       │
         └──────────────────────────────────────────────────┘
-        ┌──────────────────────────────────────────────────┐
-        │  Writes (add / delete / clear):                  │
-        │                                                  │
-        │  1. deserialize cachedRecordsJson -> JsonDocument│
-        │  2. modify JSON array                            │
-        │  3. saveJsonToFile(doc)  -> write /records.json  │
-        │  4. updateCache(doc)    -> update RAM cache      │
-        └──────────────────────────────────────────────────┘
+        ┌───────────────────────────────────────────────────┐
+        │  Writes (add / delete / clear):                   │
+        │                                                   │
+        │  1. deserialize cachedRecordsJson -> JsonDocument │
+        │  2. modify JSON array                             │
+        │  3. saveJsonToFile(doc)  -> write /records.json   │
+        │  4. updateCache(doc)    -> update RAM cache       │
+        └───────────────────────────────────────────────────┘
 ```
 
 ### 新增紀錄的細節 (addRecordToStorage)
@@ -104,7 +107,9 @@ updateCache()     ← 更新 RAM
 - Web 端 `/chartjs` 路由提供，帶 `Content-Encoding: gzip` 和 24 小時快取
 - 程式不會修改此檔案
 
-## 3. NVS (Preferences) — 校準偏移量
+## 3. NVS (Preferences) — 校準偏移量 + 排程
+
+### 校準偏移量
 
 ```
 寫入路徑（使用者校準時）：
@@ -127,10 +132,37 @@ updateCache()     ← 更新 RAM
     initSensor(offset1, offset2) → scale.set_offset()
 ```
 
-| NVS Key | 用途 | 寫入時機 | 讀取時機 |
-|---------|------|----------|----------|
-| `scale_data/offset` | Sensor 1 零點偏移 | `/set-zero1` 校準 | 開機 1 次 |
-| `scale_data/offset2` | Sensor 2 零點偏移 | `/set-zero2` 校準 | 開機 1 次 |
+### 喚醒排程
+
+```
+寫入路徑（Web 新增/刪除排程時）：
+  /add-schedule → addScheduleEntry(h, m)
+                    │
+                    ▼
+                  _saveToNVS()
+                    │
+                    ▼
+                  Preferences.begin("schedule")
+                  Preferences.putString("times", "07:00,19:00")
+                  Preferences.end()
+
+讀取路徑（僅開機時）：
+  setup() → initSchedule() → _loadFromNVS()
+              │
+              ▼
+    Preferences.begin("schedule", readonly=true)
+    Preferences.getString("times", default="")
+    Preferences.end()
+              │
+              ▼
+    解析 CSV → 排序 → entries[] 陣列
+```
+
+| NVS 命名空間 | Key | 用途 | 寫入時機 | 讀取時機 |
+|-------------|-----|------|----------|----------|
+| `scale_data` | `offset` | Sensor 1 零點偏移 | `/set-zero1` 校準 | 開機 1 次 |
+| `scale_data` | `offset2` | Sensor 2 零點偏移 | `/set-zero2` 校準 | 開機 1 次 |
+| `schedule` | `times` | 喚醒時間 CSV | Web 新增/刪除排程 | 開機 1 次 |
 
 ## 完整資料流向圖
 
@@ -153,4 +185,10 @@ HX711 #2 ──→ scale2.get_units(3) ──→ cached_weight2 (RAM)
               │                                    │
               ▼                                    ▼
          Web /get-records ← getRecordsJson() ← cachedRecordsJson (RAM)
+
+NVS (schedule/times) ──→ entries[] (RAM) ──→ getNextWakeupSeconds()
+                                                    │
+                                                    ▼
+                                          deep_sleep_manager
+                                          esp_sleep_enable_timer_wakeup()
 ```

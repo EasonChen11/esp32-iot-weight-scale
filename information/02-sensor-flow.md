@@ -7,7 +7,9 @@ initSensor(offset1, offset2)
        │
        ├─── SIMULATE_SENSOR = true ?
        │         │
-       │    Yes: sim_weight1 = 10.0, sim_weight2 = 15.0
+       │    Yes: randomSeed(analogRead(0))
+       │         sim_weight1 = 25.0
+       │         sim_weight2 = 22.0
        │         └─ return
        │
        No
@@ -46,7 +48,8 @@ updateSensor()
        ▼ No
   _doRead1()
        │
-       ├─ 模擬模式：sim_weight1 += 0.03, 超過 50 歸回 10
+       ├─ 模擬模式：base 25.0 kg + random(-0.5, +0.5) kg
+       │             每次讀取都產生新的隨機波動
        │
        └─ 真實模式：scale1.is_ready() ?
               ├─ No: return -1.0（感測器未準備好）
@@ -55,10 +58,36 @@ updateSensor()
                       └─ |raw| < 0.01 → 歸零（消除雜訊）
        │
        ▼
+  _doRead2()
+       │
+       ├─ 模擬模式：base 22.0 kg + random(-0.5, +0.5) kg
+       │
+       └─ 真實模式：同 _doRead1 邏輯
+       │
+       ▼
   cached_weight1 = 結果    ← 存入 volatile RAM
   cached_weight2 = 結果    ← 同上
   last_read_time = millis()
   Serial 輸出
+```
+
+## 模擬模式（SIMULATE_SENSOR）
+
+使用隨機波動模擬真實感測器讀數：
+
+```
+_doRead1():
+  noise = random(-500, 501) / 1000.0    // -0.500 ~ +0.500 kg
+  sim_weight1 = 25.0 + noise            // 基礎值 25 kg ± 0.5 kg
+  return sim_weight1
+
+_doRead2():
+  noise = random(-500, 501) / 1000.0    // -0.500 ~ +0.500 kg
+  sim_weight2 = 22.0 + noise            // 基礎值 22 kg ± 0.5 kg
+  return sim_weight2
+
+初始化時呼叫 randomSeed(analogRead(0)) 確保每次啟動產生不同序列。
+模擬值範圍：S1 = 24.5~25.5 kg, S2 = 21.5~22.5 kg, Total ≈ 46~48 kg
 ```
 
 ## 資料存取方式
@@ -67,12 +96,12 @@ updateSensor()
               Core 1                             Core 0
         ┌───────────────────┐          ┌───────────────────────┐
         │  updateSensor()   │          │                       │
-        │       |           │          │  getCachedWeight()    │ <- Web /data
-        │       v           │          │  getCachedWeight1()   │ <- Web /data1
-        │  cached_weight1   ├─volatile─│  getCachedWeight2()   │ <- Web /data2
-        │  cached_weight2   │          │                       │ <- MQTT
-        │                   │          │                       │ <- OLED
-        └───────────────────┘          │                       │ <- Auto-logger
+        │       |           │          │  getCachedWeight()    │ ← Web /data
+        │       v           │          │  getCachedWeight1()   │ ← Web /data1
+        │  cached_weight1   ├─volatile─│  getCachedWeight2()   │ ← Web /data2
+        │  cached_weight2   │          │                       │ ← MQTT
+        │                   │          │                       │ ← OLED
+        └───────────────────┘          │                       │ ← Auto-logger
                                        └───────────────────────┘
 ```
 
