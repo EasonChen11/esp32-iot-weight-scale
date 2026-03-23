@@ -23,7 +23,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 - **Scheduled Deep Sleep** — wake at configured times or by button press
 - **Simulation Mode** — random-fluctuation test mode without hardware
 
-> For detailed architecture, data flows, and module internals see the [`information/`](information/) folder.
+> For detailed architecture, data flows, and module internals see the [**Wiki**](https://github.com/EasonChen11/esp32-iot-weight-scale/wiki).
 
 ---
 
@@ -101,7 +101,7 @@ All modules can be toggled independently in `config.h`:
 Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, and `NTP_ENABLED` all require `WIFI_ENABLED`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
 
-> For a full explanation of each switch and their interactions, see [`information/01-system-overview.md`](information/01-system-overview.md).
+> For a full explanation of each switch and their interactions, see the [**Wiki — System Overview**](https://github.com/EasonChen11/esp32-iot-weight-scale/wiki).
 
 ---
 
@@ -151,7 +151,7 @@ docker compose -f docker/docker-compose.mqtt.yml down   # stop
 │   ├── docker-compose.mqtt.yml
 │   └── mosquitto/config/
 ├── nodered_data/                # Node-RED flows + dashboard
-├── information/                 # Detailed architecture & flow docs
+├── information/                 # Architecture docs (auto-synced to Wiki)
 └── platformio.ini
 ```
 
