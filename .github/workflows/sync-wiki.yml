@@ -1,0 +1,87 @@
+name: Sync information/ to GitHub Wiki
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'information/**'
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Sync to Wiki
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          # Configure git
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Clone wiki repo (will fail if wiki not yet initialized — see README)
+          git clone "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.wiki.git" wiki_repo
+
+          # Clean old wiki pages (keep .git)
+          find wiki_repo -maxdepth 1 -name '*.md' -delete
+
+          # Copy 01-system-overview.md as Home.md (wiki homepage)
+          cp information/01-system-overview.md wiki_repo/Home.md
+
+          # Copy remaining files, stripping number prefix and capitalizing
+          for f in information/[0-9]*.md; do
+            basename_f=$(basename "$f")
+
+            # Skip the homepage source
+            if [ "$basename_f" = "01-system-overview.md" ]; then
+              continue
+            fi
+
+            # Strip leading number and dash: "02-sensor-flow.md" → "sensor-flow.md"
+            stripped=$(echo "$basename_f" | sed 's/^[0-9]*-//')
+
+            # Convert to Wiki page name: "sensor-flow.md" → "Sensor-Flow.md"
+            wiki_name=$(echo "$stripped" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))}1' | sed 's/ /-/g')
+
+            cp "$f" "wiki_repo/$wiki_name"
+          done
+
+          # Generate _Sidebar.md
+          {
+            echo "## Navigation"
+            echo ""
+            echo "- [[Home]]"
+
+            for f in information/[0-9]*.md; do
+              basename_f=$(basename "$f")
+              if [ "$basename_f" = "01-system-overview.md" ]; then
+                continue
+              fi
+
+              stripped=$(echo "$basename_f" | sed 's/^[0-9]*-//' | sed 's/\.md$//')
+              # Display name: "sensor-flow" → "Sensor Flow"
+              display=$(echo "$stripped" | sed 's/-/ /g' | awk '{for(i=1;i<=NF;i++) $i=toupper(substr($i,1,1)) tolower(substr($i,2))}1')
+              # Link name: "Sensor-Flow"
+              link=$(echo "$display" | sed 's/ /-/g')
+
+              echo "- [[$display|$link]]"
+            done
+          } > wiki_repo/_Sidebar.md
+
+          # Push only if there are changes
+          cd wiki_repo
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No wiki changes to push."
+          else
+            git commit -m "sync wiki from information/ ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+            git push
+            echo "Wiki updated successfully."
+          fi
