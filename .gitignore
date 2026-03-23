@@ -1,7 +1,6 @@
 .claude
 .pio
 .vscode
-.github
 nodered_data
 
 # Secrets (WiFi / MQTT credentials)
