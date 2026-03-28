@@ -111,7 +111,16 @@ void initSensor(long savedOffset1, long savedOffset2)
     }
 #else
     Serial.println("[Sensor] Simulation mode: dual sensor active (random)");
-    randomSeed(analogRead(0));
+    struct tm t;
+    if (getLocalTime(&t, 0)) {
+        unsigned long seed = (t.tm_year + 1900) * 10000UL + (t.tm_mon + 1) * 100 + t.tm_mday;
+        seed = seed * 86400UL + t.tm_hour * 3600 + t.tm_min * 60 + t.tm_sec;
+        randomSeed(seed);
+        Serial.printf("[Sensor] Random seed from time: %lu\n", seed);
+    } else {
+        randomSeed(micros());
+        Serial.println("[Sensor] No time available, seed from micros()");
+    }
     sim_weight1 = 25.0f;
     sim_weight2 = 22.0f;
 #endif
