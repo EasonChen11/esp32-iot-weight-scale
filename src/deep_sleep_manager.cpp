@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <esp_sleep.h>
 #include <driver/gpio.h>
+#include <driver/rtc_io.h>
 
 #if SCHEDULE_ENABLED
 #include "schedule_manager.h"
@@ -15,6 +16,9 @@ static bool sleepTriggered = false;
 
 void initDeepSleep()
 {
+    // Release GPIO holds from previous deep sleep (all held pins are RTC GPIOs)
+    gpio_hold_dis((gpio_num_t)WAKE_BTN_GND);
+
     // Button wake-up: GPIO 32 (INPUT_PULLUP), active LOW
     pinMode(WAKE_BTN_GND, OUTPUT);
     digitalWrite(WAKE_BTN_GND, LOW);
@@ -65,6 +69,13 @@ void handleDeepSleep()
     powerDownSensors();
     gpio_hold_en((gpio_num_t)LOADCELL1_SCK_PIN);
     gpio_hold_en((gpio_num_t)LOADCELL2_SCK_PIN);
+
+    // Hold button GND LOW during deep sleep
+    gpio_hold_en((gpio_num_t)WAKE_BTN_GND);
+
+    // Ensure pullup on wake button persists in RTC domain
+    rtc_gpio_pullup_en((gpio_num_t)WAKE_BTN_PIN);
+    rtc_gpio_pulldown_dis((gpio_num_t)WAKE_BTN_PIN);
 
     Serial.println("[SLEEP] Entering deep sleep now...");
     Serial.flush();

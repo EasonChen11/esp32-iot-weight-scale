@@ -33,8 +33,8 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 |-----------|--------|------|-------|
 | HX711 #1 (left) | DT | 13 | |
 | HX711 #1 (left) | SCK | 14 | |
-| HX711 #2 (right) | DT | 18 | |
-| HX711 #2 (right) | SCK | 19 | |
+| HX711 #2 (right) | DT | 25 | RTC GPIO — holds state in deep sleep |
+| HX711 #2 (right) | SCK | 26 | RTC GPIO — holds state in deep sleep |
 | SSD1306 OLED | SDA | 21 | ESP32 default I2C |
 | SSD1306 OLED | SCL | 22 | |
 | SSD1306 OLED | VCC | 15 | GPIO as power (~20 mA, within 40 mA limit) |

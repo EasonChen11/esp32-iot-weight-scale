@@ -100,8 +100,11 @@ sleepTriggered = true
 powerDownSensors()
   → scale1.power_down()  ← SCK=HIGH, HX711 省電模式 (~1µA)
   → scale2.power_down()
-gpio_hold_en(LOADCELL1_SCK_PIN)  ← 鎖住 SCK HIGH
-gpio_hold_en(LOADCELL2_SCK_PIN)
+gpio_hold_en(LOADCELL1_SCK_PIN)  ← 鎖住 SCK HIGH (RTC_GPIO16)
+gpio_hold_en(LOADCELL2_SCK_PIN)  ← 鎖住 SCK HIGH (RTC_GPIO7)
+gpio_hold_en(WAKE_BTN_GND)      ← 鎖住按鈕 GND LOW (RTC_GPIO8)
+rtc_gpio_pullup_en(WAKE_BTN_PIN)    ← RTC 域上拉，確保 ext0 喚醒可靠
+rtc_gpio_pulldown_dis(WAKE_BTN_PIN)
     │
     ▼
 Serial: "[SLEEP] Entering deep sleep now..."
@@ -190,9 +193,13 @@ Timer 到期 → 重新開機（回到頂部）
 │  RTC 時鐘    │  CPU（兩個核心）                     │
 │  RTC 記憶體  │  WiFi                              │
 │  ext0 喚醒   │  Bluetooth                        │
-│  timer 喚醒  │  所有 GPIO（除 RTC GPIO）           │
-│  SCK hold    │  OLED                             │
+│  timer 喚醒  │  OLED                             │
+│  SCK hold    │                                   │
 │  (HX711省電) │  HX711 感測器（已 power_down）      │
+│  BTN GND     │                                   │
+│  hold (LOW)  │  所有 held pins 皆為 RTC GPIO：    │
+│  BTN pullup  │  GPIO 14,26 (SCK) / 33 (GND)     │
+│  (RTC域)     │  GPIO 32 (pullup via rtc_gpio)    │
 │              │  所有 RAM（volatile 變數全部消失）    │
 ├──────────────┴───────────────────────────────────┤
 │  功耗：~10 µA + HX711 ~2 µA（vs 正常運行 ~80 mA）   │

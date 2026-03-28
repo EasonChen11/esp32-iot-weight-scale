@@ -107,7 +107,7 @@ void initSensor(long savedOffset1, long savedOffset2)
     else
     {
         // Sensor 2 may not be wired yet — warn but do not block startup
-        Serial.println("[Sensor] Warning: Sensor 2 not responding. Check wiring (DT=GPIO18, SCK=GPIO19).");
+        Serial.println("[Sensor] Warning: Sensor 2 not responding. Check wiring (DT=GPIO25, SCK=GPIO26).");
     }
 #else
     Serial.println("[Sensor] Simulation mode: dual sensor active (random)");

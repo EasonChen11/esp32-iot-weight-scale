@@ -54,8 +54,8 @@ const unsigned long AWAKE_DURATION_MS = 600000;  // Stay awake 10 min after boot
 // HX711 pins  (DT / SCK — no ACC pin)
 const int LOADCELL1_DOUT_PIN = 13;
 const int LOADCELL1_SCK_PIN  = 14;
-const int LOADCELL2_DOUT_PIN = 18;
-const int LOADCELL2_SCK_PIN  = 19;
+const int LOADCELL2_DOUT_PIN = 25;
+const int LOADCELL2_SCK_PIN  = 26;
 
 // Calibration  (scale_factor = raw_reading / known_weight_kg)
 const float LOADCELL1_SCALE_FACTOR = 85000.0;

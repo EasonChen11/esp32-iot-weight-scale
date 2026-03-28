@@ -27,7 +27,7 @@ initSensor(offset1, offset2)
        └─ offset1 == 0 → scale1.tare()                ← 自動歸零
        │
        ▼
-  scale2.begin(DT=18, SCK=19)
+  scale2.begin(DT=25, SCK=26)
   scale2.wait_ready_timeout(2000ms)
        │
        ├─ 失敗 → 警告但不阻擋啟動（Sensor 2 為非致命）
