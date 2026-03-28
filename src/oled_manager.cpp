@@ -7,7 +7,7 @@
 #include <Adafruit_SSD1306.h>
 
 #define SCREEN_WIDTH  128
-#define SCREEN_HEIGHT  64
+#define SCREEN_HEIGHT  32
 
 static Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 
@@ -37,30 +37,30 @@ void initOLED()
     Serial.println("[OLED] Initialized");
 }
 
-// Layout for 128×64:
-//   Y= 0  — mode label  (textSize 2, 16 px tall) ends at Y=16
-//   Y=22  — weight value (textSize 3, 24 px tall) ends at Y=46
-//   Y=30  — "kg" unit   (textSize 2, 16 px tall) ends at Y=46  (same baseline as number, X=96)
+// Layout for 128×32:
+//   Y= 0  — mode label  (textSize 1, 8 px tall)
+//   Y=10  — weight value (textSize 2, 16 px tall) + "kg" unit
+// Total height used: 10 + 16 = 26 px (fits within 32 px)
 static void drawWeight(const char *label, float kg)
 {
     display.clearDisplay();
 
-    // Mode label — larger text so it is clearly visible
-    display.setTextSize(2);
+    // Mode label — small text at top
+    display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     display.setCursor(0, 0);
     display.print(label);
 
-    // Weight value — large
-    display.setTextSize(3);
-    display.setCursor(0, 22);
+    // Weight value — medium
+    display.setTextSize(2);
+    display.setCursor(0, 14);
     char buf[12];
     snprintf(buf, sizeof(buf), "%.2f", kg);
     display.print(buf);
 
-    // Unit — same baseline as number (both end at Y=46)
-    display.setTextSize(2);
-    display.setCursor(96, 30);
+    // Unit — right-aligned, same row as weight
+    display.setTextSize(1);
+    display.setCursor(104, 22);
     display.print("kg");
 
     display.display();

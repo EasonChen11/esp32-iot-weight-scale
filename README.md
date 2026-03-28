@@ -37,7 +37,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 | HX711 #2 (right) | SCK | 26 | RTC GPIO — holds state in deep sleep |
 | SSD1306 OLED | SDA | 21 | ESP32 default I2C |
 | SSD1306 OLED | SCL | 22 | |
-| SSD1306 OLED | VCC | 15 | GPIO as power (~20 mA, within 40 mA limit) |
+| SSD1306 OLED | VCC | 19 | GPIO as power (~20 mA, within 40 mA limit) |
 | Wake button | Signal | 32 | `DEEP_SLEEP_ENABLED` — ext0, active LOW |
 | Wake button | GND | 33 | OUTPUT LOW as button GND |
 

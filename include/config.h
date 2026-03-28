@@ -26,7 +26,7 @@ const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000;
 // OLED (SSD1306 via I2C — ESP32 default I2C pins)
 const int OLED_SDA_PIN  = 21;
 const int OLED_SCL_PIN  = 22;
-const int OLED_PWR_PIN  = 15;  // GPIO used as OLED VCC (~20 mA, within 40 mA GPIO limit)
+const int OLED_PWR_PIN  = 19;  // GPIO used as OLED VCC (~20 mA, within 40 mA GPIO limit)
 
 // OLED auto-cycle timing
 const unsigned long OLED_TOTAL_SHOW_MS  = 5000;  // How long to show Total  (ms)

@@ -3,8 +3,8 @@
 ## 硬體配置
 
 ```
-ESP32                    SSD1306 OLED (128x64)
-GPIO 15 (OUTPUT HIGH) ──→ VCC (~20mA, 在 40mA GPIO 限制內)
+ESP32                    SSD1306 OLED (128x32)
+GPIO 19 (OUTPUT HIGH) ──→ VCC (~20mA, 在 40mA GPIO 限制內)
 GPIO 21 ────────────────→ SDA (I2C 資料, ESP32 預設 I2C SDA)
 GPIO 22 ────────────────→ SCL (I2C 時脈, 400kHz Fast-mode, ESP32 預設 I2C SCL)
 GND     ────────────────→ GND
@@ -18,8 +18,8 @@ GND     ────────────────→ GND
 initOLED()
     │
     ▼
-pinMode(GPIO 15, OUTPUT)
-digitalWrite(GPIO 15, HIGH)    ← 供電給 OLED
+pinMode(GPIO 19, OUTPUT)
+digitalWrite(GPIO 19, HIGH)    ← 供電給 OLED
 delay(10)                      ← 等電壓穩定
     │
     ▼
@@ -81,24 +81,22 @@ handleOLED()
 Full cycle = 5 + 2 + 2 = 9 sec
 ```
 
-## 畫面佈局 (128x64 像素)
+## 畫面佈局 (128x32 像素)
 
 ```
 drawWeight(label, kg)
 
 ┌────────────────────────────────┐
-│ Y=0  label (textSize 2)        │  例："Total"
+│ Y=0  label (textSize 1)        │  例："Total"
 │                                │
-│                                │
-│ Y=22 weight (textSize 3)   kg  │  例："24.23"  "kg"
-│                          Y=30  │
-│                                │
-│                                │
+│ Y=14 weight (textSize 2)   kg  │  例："24.23"  "kg"
+│                         Y=22   │    (textSize 1)
 └────────────────────────────────┘
-  X=0                      X=96
+  X=0                      X=104
 
+textSize 1 = 6x8 像素/字元
 textSize 2 = 12x16 像素/字元
-textSize 3 = 18x24 像素/字元
+Total height: 14 + 16 = 30 px (fits 32 px)
 ```
 
 ## 資料來源
