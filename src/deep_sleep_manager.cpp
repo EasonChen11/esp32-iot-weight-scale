@@ -1,8 +1,10 @@
 #include "config.h"
 #if DEEP_SLEEP_ENABLED
 #include "deep_sleep_manager.h"
+#include "sensor_manager.h"
 #include <Arduino.h>
 #include <esp_sleep.h>
+#include <driver/gpio.h>
 
 #if SCHEDULE_ENABLED
 #include "schedule_manager.h"
@@ -59,6 +61,10 @@ void handleDeepSleep()
 #else
     Serial.println("[SLEEP] No schedule module — button wake-up only");
 #endif
+
+    powerDownSensors();
+    gpio_hold_en((gpio_num_t)LOADCELL1_SCK_PIN);
+    gpio_hold_en((gpio_num_t)LOADCELL2_SCK_PIN);
 
     Serial.println("[SLEEP] Entering deep sleep now...");
     Serial.flush();

@@ -2,6 +2,7 @@
 #include "HX711.h"
 #include "config.h"
 #include <Arduino.h>
+#include <driver/gpio.h>
 
 static HX711 scale1;
 static HX711 scale2;
@@ -53,6 +54,10 @@ void initSensor(long savedOffset1, long savedOffset2)
     Serial.printf("[Sensor] Offsets: sensor1=%ld, sensor2=%ld\n", savedOffset1, savedOffset2);
 
 #if !SIMULATE_SENSOR
+    // Release GPIO hold from previous deep-sleep power-down
+    gpio_hold_dis((gpio_num_t)LOADCELL1_SCK_PIN);
+    gpio_hold_dis((gpio_num_t)LOADCELL2_SCK_PIN);
+
     // ── Sensor 1 ──────────────────────────────────────────────────────
     scale1.begin(LOADCELL1_DOUT_PIN, LOADCELL1_SCK_PIN);
     Serial.println("[Sensor] Initializing sensor 1...");
@@ -200,3 +205,12 @@ long captureAbsoluteOffset2()
 }
 
 long captureAbsoluteOffset() { return captureAbsoluteOffset1(); }
+
+void powerDownSensors()
+{
+#if !SIMULATE_SENSOR
+    scale1.power_down();
+    scale2.power_down();
+    Serial.println("[Sensor] HX711 modules powered down");
+#endif
+}

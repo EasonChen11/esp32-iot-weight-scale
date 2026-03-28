@@ -5,13 +5,12 @@
 ```
 ESP32                    SSD1306 OLED (128x64)
 GPIO 15 (OUTPUT HIGH) ──→ VCC (~20mA, 在 40mA GPIO 限制內)
-GPIO 4  ────────────────→ SDA (I2C 資料)
-GPIO 5  ────────────────→ SCL (I2C 時脈, 400kHz Fast-mode)
+GPIO 21 ────────────────→ SDA (I2C 資料, ESP32 預設 I2C SDA)
+GPIO 22 ────────────────→ SCL (I2C 時脈, 400kHz Fast-mode, ESP32 預設 I2C SCL)
 GND     ────────────────→ GND
 ```
 
-為什麼不用 3.3V/5V：兩個 HX711 已經佔用了電源腳位。
-為什麼不用 GPIO 21/22 (預設 I2C)：被 HX711 #1 佔用。
+使用 ESP32 預設 I2C 腳位（GPIO 21/22），未來擴充其他 I2C 裝置更方便。
 
 ## 初始化
 
@@ -24,7 +23,7 @@ digitalWrite(GPIO 15, HIGH)    ← 供電給 OLED
 delay(10)                      ← 等電壓穩定
     │
     ▼
-Wire.begin(SDA=4, SCL=5)      ← 自定義 I2C 腳位
+Wire.begin(SDA=21, SCL=22)    ← ESP32 預設 I2C 腳位
 Wire.setClock(400000)          ← Fast-mode: I2C 傳輸 90ms → 23ms
     │
     ▼

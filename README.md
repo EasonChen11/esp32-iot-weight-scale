@@ -31,12 +31,12 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 
 | Component | Signal | GPIO | Notes |
 |-----------|--------|------|-------|
-| HX711 #1 (left) | DT | 21 | |
-| HX711 #1 (left) | SCK | 22 | |
+| HX711 #1 (left) | DT | 13 | |
+| HX711 #1 (left) | SCK | 14 | |
 | HX711 #2 (right) | DT | 18 | |
 | HX711 #2 (right) | SCK | 19 | |
-| SSD1306 OLED | SDA | 4 | Custom I2C (GPIO 21/22 taken by HX711) |
-| SSD1306 OLED | SCL | 5 | |
+| SSD1306 OLED | SDA | 21 | ESP32 default I2C |
+| SSD1306 OLED | SCL | 22 | |
 | SSD1306 OLED | VCC | 15 | GPIO as power (~20 mA, within 40 mA limit) |
 | Wake button | Signal | 32 | `DEEP_SLEEP_ENABLED` — ext0, active LOW |
 | Wake button | GND | 33 | OUTPUT LOW as button GND |

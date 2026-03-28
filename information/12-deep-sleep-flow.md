@@ -97,6 +97,13 @@ sleepTriggered = true
     │    No:  "[SLEEP] No schedule module — button wake-up only"
     │
     ▼
+powerDownSensors()
+  → scale1.power_down()  ← SCK=HIGH, HX711 省電模式 (~1µA)
+  → scale2.power_down()
+gpio_hold_en(LOADCELL1_SCK_PIN)  ← 鎖住 SCK HIGH
+gpio_hold_en(LOADCELL2_SCK_PIN)
+    │
+    ▼
 Serial: "[SLEEP] Entering deep sleep now..."
 Serial.flush()
 delay(100)          ← 確保序列輸出完成
@@ -184,11 +191,11 @@ Timer 到期 → 重新開機（回到頂部）
 │  RTC 記憶體  │  WiFi                              │
 │  ext0 喚醒   │  Bluetooth                        │
 │  timer 喚醒  │  所有 GPIO（除 RTC GPIO）           │
-│              │  OLED                             │
-│              │  HX711 感測器                      │
+│  SCK hold    │  OLED                             │
+│  (HX711省電) │  HX711 感測器（已 power_down）      │
 │              │  所有 RAM（volatile 變數全部消失）    │
 ├──────────────┴───────────────────────────────────┤
-│  功耗：~10 µA（vs 正常運行 ~80 mA）                 │
+│  功耗：~10 µA + HX711 ~2 µA（vs 正常運行 ~80 mA）   │
 │  喚醒後：完整重開機（setup() 重新執行）               │
 └──────────────────────────────────────────────────┘
 ```

@@ -96,7 +96,7 @@ loop() 開始在 Core 1 執行
 | `SIMULATE_SENSOR` | `false` | 不讀 HX711，用亂數模擬重量（S1≈25kg, S2≈22kg ±0.5kg） | 讀真實 HX711 感測器 |
 | `NTP_ENABLED` | `true` | STA 連線成功時自動從 NTP server 同步時間 | 不同步，時間靠 `/sync` 或從 0 開始 |
 | `SCHEDULE_ENABLED` | `true` | 可設定每日喚醒時間（NVS 儲存），deep sleep 時用來計算下次喚醒 | 無排程功能，deep sleep 只能靠按鈕喚醒 |
-| `DEEP_SLEEP_ENABLED` | `false` | 開機 10 分鐘後自動進入深度睡眠（~10µA），靠排程/按鈕喚醒 | 永遠保持運行不休眠 |
+| `DEEP_SLEEP_ENABLED` | `false` | 開機 10 分鐘後自動進入深度睡眠（~10µA），入睡前自動 power down HX711 省電，靠排程/按鈕喚醒 | 永遠保持運行不休眠 |
 
 ### 依賴關係圖
 

@@ -10,7 +10,7 @@
 #define MQTT_ENABLED        false
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED        true
-#define SIMULATE_SENSOR     true
+#define SIMULATE_SENSOR     false
 
 // WiFi & MQTT credentials — kept in a .gitignored file
 // Copy config_secrets.h.example → config_secrets.h and fill in your values
@@ -23,9 +23,9 @@ const char *const MQTT_TOPIC_SENSOR2 = "weight-scale/sensor2";
 const char *const MQTT_TOPIC_TOTAL   = "weight-scale/total";
 const unsigned long MQTT_PUBLISH_INTERVAL_MS = 5000;
 
-// OLED (SSD1306 via I2C — remapped away from HX711 pins)
-const int OLED_SDA_PIN  = 4;
-const int OLED_SCL_PIN  = 5;
+// OLED (SSD1306 via I2C — ESP32 default I2C pins)
+const int OLED_SDA_PIN  = 21;
+const int OLED_SCL_PIN  = 22;
 const int OLED_PWR_PIN  = 15;  // GPIO used as OLED VCC (~20 mA, within 40 mA GPIO limit)
 
 // OLED auto-cycle timing
@@ -52,8 +52,8 @@ const int WAKE_BTN_GND = 33;  // GPIO used as button GND (OUTPUT LOW — button 
 const unsigned long AWAKE_DURATION_MS = 600000;  // Stay awake 10 min after boot before sleeping
 
 // HX711 pins  (DT / SCK — no ACC pin)
-const int LOADCELL1_DOUT_PIN = 21;
-const int LOADCELL1_SCK_PIN  = 22;
+const int LOADCELL1_DOUT_PIN = 13;
+const int LOADCELL1_SCK_PIN  = 14;
 const int LOADCELL2_DOUT_PIN = 18;
 const int LOADCELL2_SCK_PIN  = 19;
 

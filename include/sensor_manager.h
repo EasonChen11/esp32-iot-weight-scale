@@ -61,3 +61,10 @@ long captureAbsoluteOffset2();
 Alias for captureAbsoluteOffset1() – kept for backward compatibility.
 */
 long captureAbsoluteOffset();
+
+/*
+Power down both HX711 modules to save ~1.5 mA each during deep sleep.
+Call before esp_deep_sleep_start(). Sensors are re-initialized by
+initSensor() on the next boot cycle, which calls scale.begin() internally.
+*/
+void powerDownSensors();

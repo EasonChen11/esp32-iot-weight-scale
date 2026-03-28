@@ -15,7 +15,7 @@ initSensor(offset1, offset2)
        No
        │
        ▼
-  scale1.begin(DT=21, SCK=22)
+  scale1.begin(DT=13, SCK=14)
   scale1.wait_ready_timeout(2000ms)
        │
        ├─ 失敗 → Serial 錯誤訊息 → delay(1000) → 遞迴重試
@@ -127,3 +127,26 @@ _doRead2():
 **差異：**
 - `tare` = 暫時歸零，存在 HX711 library 的 RAM 變數，重開機就消失
 - `set-zero` = 永久校準，offset 寫入 NVS flash，開機自動套用
+
+## HX711 省電（Deep Sleep）
+
+進入深度睡眠前，`powerDownSensors()` 會呼叫兩顆 HX711 的 `power_down()`（SCK 拉 HIGH），
+搭配 `gpio_hold_en()` 確保 SCK 在 deep sleep 期間維持 HIGH，避免 HX711 意外喚醒。
+
+喚醒後 `initSensor()` 先呼叫 `gpio_hold_dis()` 釋放 SCK，再由 `scale.begin()` 拉低 SCK 自動喚醒 HX711。
+
+```
+入睡前：
+  powerDownSensors()
+    → scale1.power_down()   (SCK=HIGH → HX711 進入省電模式, ~1µA)
+    → scale2.power_down()
+    → gpio_hold_en(SCK1)    (鎖住 GPIO 狀態)
+    → gpio_hold_en(SCK2)
+
+喚醒後：
+  initSensor()
+    → gpio_hold_dis(SCK1)   (釋放 GPIO hold)
+    → gpio_hold_dis(SCK2)
+    → scale1.begin()         (SCK=LOW → HX711 自動喚醒)
+    → scale2.begin()
+```

@@ -153,7 +153,11 @@
                          │       │       │
                          └───────┼───────┘
                                  ▼
-                        esp_deep_sleep_start()
+                    powerDownSensors()
+                    gpio_hold_en(SCK)
+                        │
+                        ▼
+                    esp_deep_sleep_start()
                         功耗 ~10 µA
 ```
 
@@ -205,6 +209,7 @@
   │    setup() → WiFi AP+STA → STA 連上 → NTP 同步（修正漂移）
   │        │
   │        ▼
+  │    initSensor() → gpio_hold_dis(SCK) → scale.begin() → HX711 喚醒
   │    10 秒後 Auto-logger 記錄重量（NTP 時間戳）
   │    MQTT 每 5 秒發布
   │    Web server 可用
@@ -212,6 +217,7 @@
   │        │ ← 10 分鐘 →
   │        ▼
   │    handleDeepSleep() 觸發
+  │    powerDownSensors() → HX711 power down + gpio_hold_en(SCK)
   │    getNextWakeupSeconds() → 下個排程 19:00（12 小時後）
   │    esp_sleep_enable_timer_wakeup(43200 秒)
   │    esp_deep_sleep_start()

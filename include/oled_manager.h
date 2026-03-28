@@ -6,8 +6,8 @@
 initOLED
 
 Initialize the SSD1306 OLED display and the mode-select button.
-Uses custom I2C pins (OLED_SDA_PIN / OLED_SCL_PIN) defined in config.h
-to avoid conflict with the HX711 modules on GPIO 21/22.
+Uses I2C pins (OLED_SDA_PIN / OLED_SCL_PIN) defined in config.h
+(ESP32 default GPIO 21/22).
 
 Parameters:
   none
