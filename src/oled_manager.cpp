@@ -22,19 +22,27 @@ void initOLED()
     // Power the OLED from a GPIO pin — avoids using the shared 3.3V/5V rails
     pinMode(OLED_PWR_PIN, OUTPUT);
     digitalWrite(OLED_PWR_PIN, HIGH);
-    delay(10); // let rail stabilise before I2C init
+    Serial.printf("[OLED] VCC pin GPIO %d set HIGH\n", OLED_PWR_PIN);
+    delay(50); // let rail stabilise before I2C init
 
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     Wire.setClock(400000); // Fast-mode: cuts I2C transfer ~90 ms → ~23 ms
+    Serial.printf("[OLED] I2C started on SDA=%d, SCL=%d\n", OLED_SDA_PIN, OLED_SCL_PIN);
+
+    // I2C scan to verify device is reachable
+    Wire.beginTransmission(0x3C);
+    uint8_t i2cErr = Wire.endTransmission();
+    Serial.printf("[OLED] I2C scan 0x3C: %s (err=%d)\n",
+                  i2cErr == 0 ? "FOUND" : "NOT FOUND", i2cErr);
 
     if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
     {
-        Serial.println("[OLED] SSD1306 not found — check wiring");
+        Serial.println("[OLED] SSD1306 init FAILED — check wiring");
         return;
     }
     display.clearDisplay();
     display.display();
-    Serial.println("[OLED] Initialized");
+    Serial.printf("[OLED] Initialized OK (%dx%d)\n", SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 // Layout for 128×32:
