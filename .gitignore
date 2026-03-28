@@ -9,3 +9,7 @@ include/config_secrets.h
 # Mosquitto runtime files (written by root inside Docker container)
 docker/mosquitto/data/
 docker/mosquitto/log/
+
+CLAUDE.md
+.github/
+!.github/workflows/sync-wiki.yml
