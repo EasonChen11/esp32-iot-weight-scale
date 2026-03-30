@@ -5,6 +5,7 @@
 #include "sensor_manager.h"
 #include "storage/littlefs_storage.h"
 #include "storage/nvs_storage.h"
+#include "storage/littlefs_storage.h"
 #if SCHEDULE_ENABLED
 #include "schedule_manager.h"
 #endif
@@ -12,6 +13,9 @@
 #include <LittleFS.h>
 #if NTP_ENABLED
 #include "wifi_manager.h"
+#endif
+#if GOOGLE_SHEETS_ENABLED
+#include "google_sheets_manager.h"
 #endif
 
 /*
@@ -118,9 +122,12 @@ void initWebRoutes(WebServer &server)
 
     server.on("/add-record", [&server]()
               {
-                  String t = server.arg("t");
-                  String w = server.arg("w");
-                  addRecordToStorage(t, w);
+                  String t  = server.arg("t");
+                  String d  = server.arg("d");
+                  String s1 = server.arg("s1");
+                  String s2 = server.arg("s2");
+                  long id = getNextRecordId();
+                  addRecordToStorage(id, d, t, s1, s2);
                   server.send(200, "application/json", getRecordsJson()); });
 
     server.on("/del-record", [&server]()
@@ -173,6 +180,13 @@ void initWebRoutes(WebServer &server)
                   int idx = server.arg("i").toInt();
                   removeScheduleEntry(idx);
                   server.send(200, "application/json", getScheduleJson()); });
+#endif
+
+#if GOOGLE_SHEETS_ENABLED
+    server.on("/sync-sheets", [&server]()
+              {
+                  String result = triggerGoogleSheetsSync();
+                  server.send(200, "text/plain", result); });
 #endif
 
     server.begin();

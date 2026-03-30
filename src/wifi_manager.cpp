@@ -60,7 +60,18 @@ void initWiFi()
 #include <time.h>
 #include "esp_sntp.h"
 
-static bool _timeSynced = false;
+static volatile bool _timeSynced = false;
+
+// SNTP callback — fired by ESP-IDF when NTP response arrives
+static void ntpSyncCallback(struct timeval *tv)
+{
+    _timeSynced = true;
+    struct tm timeinfo;
+    localtime_r(&tv->tv_sec, &timeinfo);
+    char buf[20];
+    strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+    Serial.printf("[NTP] Callback: time synced → %s\n", buf);
+}
 
 bool isTimeSynced()
 {
@@ -81,7 +92,7 @@ void initNTP()
 
     // Log old RTC time (kept as fallback if NTP fails)
     struct tm timeinfo;
-    if (getLocalTime(&timeinfo)) {
+    if (getLocalTime(&timeinfo, 0)) {  // timeout=0: don't block
         char buf[20];
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
         Serial.printf("[NTP] RTC time before sync: %s\n", buf);
@@ -89,31 +100,30 @@ void initNTP()
         Serial.println("[NTP] No RTC time available");
     }
 
+    // Register callback before starting SNTP
+    sntp_set_time_sync_notification_cb(ntpSyncCallback);
+
     // 重置同步狀態，避免深度睡眠醒來後繼承上次 boot 的舊 COMPLETED 狀態
     sntp_set_sync_status(SNTP_SYNC_STATUS_RESET);
 
-    configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
-    Serial.print("[NTP] Synchronizing");
+    configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+    Serial.printf("[NTP] Servers: %s, %s, %s\n", NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+    Serial.print("[NTP] Waiting for sync");
 
-    // 用 sntp_get_sync_status() 取代 getLocalTime() 來偵測同步
-    // getLocalTime() 在深度睡眠後會因 RTC 舊時間立刻回傳 true（假陽性）
-    // sntp_get_sync_status() 只有收到真正 NTP 回應才回傳 COMPLETED
-    int retries = 0;
-    while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retries < 20) {
+    // Poll with callback — loop is just for blocking setup(), callback does the real detection
+    for (int i = 0; i < 60; i++) {
+        if (_timeSynced) break;
         delay(500);
         Serial.print(".");
-        retries++;
     }
 
-    if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
-        _timeSynced = true;
-        getLocalTime(&timeinfo);
+    if (_timeSynced) {
+        getLocalTime(&timeinfo, 0);
         char buf[20];
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
         Serial.printf("\n[NTP] Time synced: %s\n", buf);
     } else {
-        _timeSynced = false;
-        Serial.println("\n[NTP] Sync failed — RTC time preserved as fallback");
+        Serial.println("\n[NTP] Sync failed after 30s — RTC time preserved as fallback");
     }
 }
 #endif // NTP_ENABLED

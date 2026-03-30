@@ -146,16 +146,20 @@ String getIndexHTML()
             </div>
             <div class="btn-group">
                 <button class="btn-record" onclick="addRecord()">Record Data</button>
+                <button class="btn-sched" onclick="syncSheets()">Sync Sheets</button>
             </div>
 
             <div class="table-container">
-                <h3 style="color:#555; font-size:15px;">Data Records (Max 10)</h3>
+                <h3 style="color:#555; font-size:15px;">Data Records (Max 50)</h3>
                 <table>
                     <thead>
                         <tr>
                             <th>#</th>
+                            <th>Date</th>
                             <th>Time</th>
-                            <th>Weight (kg)</th>
+                            <th>S1 (kg)</th>
+                            <th>S2 (kg)</th>
+                            <th>Total (kg)</th>
                             <th>Del</th>
                         </tr>
                     </thead>
@@ -281,10 +285,16 @@ String getIndexHTML()
             const tbody = document.getElementById('recordBody');
             tbody.innerHTML = '';
             records.forEach((item, i) => {
+                const s1 = parseFloat(item.sensor1) || 0;
+                const s2 = parseFloat(item.sensor2) || 0;
+                const total = (s1 + s2).toFixed(3);
                 tbody.innerHTML += `<tr>
                     <td>${i + 1}</td>
+                    <td>${item.date || '-'}</td>
                     <td>${item.time}</td>
-                    <td>${item.weight}</td>
+                    <td>${s1.toFixed(3)}</td>
+                    <td>${s2.toFixed(3)}</td>
+                    <td>${total}</td>
                     <td><button class="btn-del" onclick="deleteRecord(${i})">&#x2715;</button></td>
                 </tr>`;
             });
@@ -295,9 +305,13 @@ String getIndexHTML()
         }
 
         function addRecord() {
-            const timeStr  = new Date().toLocaleTimeString('en-US', { hour12: false });
-            const totalVal = document.getElementById('weightTotal').innerText;
-            fetch('/add-record?t=' + encodeURIComponent(timeStr) + '&w=' + totalVal)
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0, 10);
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false });
+            const s1Val = document.getElementById('weight1').innerText;
+            const s2Val = document.getElementById('weight2').innerText;
+            fetch('/add-record?t=' + encodeURIComponent(timeStr)
+                + '&d=' + dateStr + '&s1=' + s1Val + '&s2=' + s2Val)
                 .then(r => r.json()).then(renderTable);
         }
 
@@ -310,6 +324,17 @@ String getIndexHTML()
                 fetch('/clear-records').then(r => r.json()).then(renderTable)
                     .catch(err => console.error("Clear failed", err));
             }
+        }
+
+        /* ── Google Sheets sync ─────────────────────────────────────── */
+        function syncSheets() {
+            const btn = event.target;
+            btn.innerText = 'Syncing...';
+            btn.disabled = true;
+            fetch('/sync-sheets')
+                .then(r => r.text())
+                .then(msg => { alert(msg); btn.innerText = 'Sync Sheets'; btn.disabled = false; })
+                .catch(() => { alert('Sync failed'); btn.innerText = 'Sync Sheets'; btn.disabled = false; });
         }
 
         /* ── Schedule ───────────────────────────────────────────────── */

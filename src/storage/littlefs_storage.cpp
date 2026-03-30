@@ -29,6 +29,24 @@ void loadRecordsCache()
   }
   cachedRecordsJson = file.readString();
   file.close();
+
+  // Detect old format (no "id" key) and clear for migration
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, cachedRecordsJson);
+  if (!err && doc.is<JsonArray>() && doc.as<JsonArray>().size() > 0)
+  {
+    JsonObject first = doc.as<JsonArray>()[0].as<JsonObject>();
+    if (!first["id"].is<long>())
+    {
+      Serial.println("[Storage] Old format detected -- records cleared for migration");
+      cachedRecordsJson = "[]";
+      File f = LittleFS.open(FILE_PATH, "w");
+      f.print("[]");
+      f.close();
+      return;
+    }
+  }
+
   Serial.printf("[Storage] Records cache loaded (%d bytes)\n", cachedRecordsJson.length());
 }
 
@@ -37,7 +55,7 @@ String getRecordsJson()
   return cachedRecordsJson;
 }
 
-void addRecordToStorage(String time, String weight)
+void addRecordToStorage(long id, String date, String time, String sensor1, String sensor2)
 {
   JsonDocument doc;
   deserializeJson(doc, cachedRecordsJson);
@@ -45,8 +63,12 @@ void addRecordToStorage(String time, String weight)
 
   JsonDocument newEntryDoc;
   JsonObject newEntry = newEntryDoc.to<JsonObject>();
+  newEntry["id"] = id;
+  newEntry["date"] = date;
   newEntry["time"] = time;
-  newEntry["weight"] = weight;
+  newEntry["sensor1"] = sensor1;
+  newEntry["sensor2"] = sensor2;
+  newEntry["synced"] = false;
 
   JsonDocument nextDoc;
   JsonArray nextArray = nextDoc.to<JsonArray>();
@@ -58,6 +80,56 @@ void addRecordToStorage(String time, String weight)
   }
   saveJsonToFile(nextDoc);
   updateCache(nextDoc);
+}
+
+void markRecordSynced(long id)
+{
+  JsonDocument doc;
+  deserializeJson(doc, cachedRecordsJson);
+  JsonArray array = doc.as<JsonArray>();
+
+  bool found = false;
+  for (JsonVariant v : array)
+  {
+    if (v["id"].as<long>() == id)
+    {
+      v["synced"] = true;
+      found = true;
+      break;
+    }
+  }
+
+  if (found)
+  {
+    saveJsonToFile(doc);
+    updateCache(doc);
+  }
+  else
+  {
+    Serial.printf("[Storage] Warning: record ID %ld not found for sync mark\n", id);
+  }
+}
+
+String getUnsyncedRecordsJson()
+{
+  JsonDocument doc;
+  deserializeJson(doc, cachedRecordsJson);
+  JsonArray array = doc.as<JsonArray>();
+
+  JsonDocument filterDoc;
+  JsonArray filtered = filterDoc.to<JsonArray>();
+
+  for (JsonVariant v : array)
+  {
+    if (!v["synced"].as<bool>())
+    {
+      filtered.add(v);
+    }
+  }
+
+  String result;
+  serializeJson(filterDoc, result);
+  return result;
 }
 
 void deleteRecordFromStorage(int index)

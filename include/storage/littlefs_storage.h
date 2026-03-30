@@ -3,6 +3,8 @@
 
 void loadRecordsCache();
 String getRecordsJson();
-void addRecordToStorage(String time, String weight);
+void addRecordToStorage(long id, String date, String time, String sensor1, String sensor2);
+void markRecordSynced(long id);
+String getUnsyncedRecordsJson();
 void deleteRecordFromStorage(int index);
 void clearRecordsInStorage();

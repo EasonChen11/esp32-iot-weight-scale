@@ -30,4 +30,6 @@ Returns:
 */
 void handleAutoLogging();
 
+bool isStartupRecordDone();
+
 #endif // AUTO_LOGGER_ENABLED

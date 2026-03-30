@@ -41,3 +41,14 @@ long getAbsoluteOffset2()
 
   return offset;
 }
+
+long getNextRecordId()
+{
+  Preferences preferences;
+  preferences.begin("scale_data", false);
+  long id = preferences.getLong("record_id", 0) + 1;
+  preferences.putLong("record_id", id);
+  preferences.end();
+
+  return id;
+}

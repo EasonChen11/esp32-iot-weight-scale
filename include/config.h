@@ -10,6 +10,7 @@
 #define MQTT_ENABLED false
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED true
+#define GOOGLE_SHEETS_ENABLED true
 #define SIMULATE_SENSOR false
 
 // WiFi & MQTT credentials — kept in a .gitignored file
@@ -34,8 +35,9 @@ const unsigned long OLED_SENSOR_SHOW_MS = 2000; // How long to show each sensor 
 
 // NTP time synchronization (requires WIFI_ENABLED)
 #define NTP_ENABLED true
-const char *const NTP_SERVER1 = "pool.ntp.org";
-const char *const NTP_SERVER2 = "time.nist.gov";
+const char *const NTP_SERVER1 = "216.239.35.0";   // time.google.com IP
+const char *const NTP_SERVER2 = "time.google.com";
+const char *const NTP_SERVER3 = "pool.ntp.org";
 const long NTP_GMT_OFFSET_SEC = 28800; // UTC+8 (Taiwan)
 const int NTP_DAYLIGHT_OFFSET_SEC = 0;
 
@@ -64,4 +66,4 @@ const float LOADCELL2_SCALE_FACTOR = 85000.0;
 // Auto-logger
 const unsigned long STARTUP_RECORD_DELAY_MS = 10000;
 const unsigned long AUTO_RECORD_INTERVAL_MS = 3600000;
-const int MAX_RECORDS = 10;
+const int MAX_RECORDS = 50;

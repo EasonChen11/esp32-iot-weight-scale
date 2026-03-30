@@ -18,6 +18,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 - **Web Dashboard** — built-in HTTP UI with live charts (Chart.js from LittleFS)
 - **OLED Display** — SSD1306 auto-cycles Total / Sensor 1 / Sensor 2
 - **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS (hourly disabled in deep sleep mode)
+- **Google Sheets Sync** — auto-upload records to Google Sheets via Apps Script with deduplication
 - **MQTT + Node-RED** — optional live stream to a Docker-based dashboard
 - **NTP Time Sync** — automatic via NTP; browser `/sync` as AP-mode fallback
 - **Scheduled Deep Sleep** — wake at configured times or by button press
@@ -87,19 +88,21 @@ After boot, open `http://<ESP32-IP>` (STA) or `http://192.168.4.1` (AP mode) in 
 All modules can be toggled independently in `config.h`:
 
 ```cpp
-#define WIFI_ENABLED        true
-#define WEB_SERVER_ENABLED  true
-#define MQTT_ENABLED        false
-#define AUTO_LOGGER_ENABLED true
-#define OLED_ENABLED        true
-#define NTP_ENABLED         true
-#define SCHEDULE_ENABLED    true
-#define DEEP_SLEEP_ENABLED  false
-#define SIMULATE_SENSOR     false
+#define WIFI_ENABLED            true
+#define WEB_SERVER_ENABLED      true
+#define MQTT_ENABLED            false
+#define AUTO_LOGGER_ENABLED     true
+#define OLED_ENABLED            true
+#define GOOGLE_SHEETS_ENABLED   true
+#define NTP_ENABLED             true
+#define SCHEDULE_ENABLED        true
+#define DEEP_SLEEP_ENABLED      false
+#define SIMULATE_SENSOR         false
 ```
 
-Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, and `NTP_ENABLED` all require `WIFI_ENABLED`.
+Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_SHEETS_ENABLED` all require `WIFI_ENABLED`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
+`GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL in `config_secrets.h`.
 
 > For a full explanation of each switch and their interactions, see the [**Wiki — System Overview**](https://github.com/EasonChen11/esp32-iot-weight-scale/wiki).
 
@@ -136,6 +139,7 @@ docker compose -f docker/docker-compose.mqtt.yml down   # stop
 │   ├── mqtt_manager.h
 │   ├── oled_manager.h
 │   ├── auto_logger.h
+│   ├── google_sheets_manager.h
 │   ├── deep_sleep_manager.h
 │   ├── schedule_manager.h
 │   ├── web_server_logic.h

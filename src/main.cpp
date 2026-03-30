@@ -15,6 +15,9 @@
 #if MQTT_ENABLED
 #include "mqtt_manager.h"
 #endif
+#if GOOGLE_SHEETS_ENABLED
+#include "google_sheets_manager.h"
+#endif
 #if OLED_ENABLED
 #include "oled_manager.h"
 #endif
@@ -66,6 +69,10 @@ void WebAndTasksCode(void *pvParameters)
     handleMQTT();
 #endif
 
+#if GOOGLE_SHEETS_ENABLED
+    handleGoogleSheetsSync();
+#endif
+
 #if DEEP_SLEEP_ENABLED
     handleDeepSleep();
 #endif
@@ -78,6 +85,7 @@ void WebAndTasksCode(void *pvParameters)
 void setup()
 {
   Serial.begin(115200);
+  delay(300); // Wait for serial monitor connection
 
   // Initialize storage and sensor
   initStorage();
@@ -103,6 +111,10 @@ void setup()
   initMQTT();
 #endif
 
+#if GOOGLE_SHEETS_ENABLED
+  initGoogleSheets();
+#endif
+
 #if OLED_ENABLED
   initOLED();
 #endif
@@ -119,7 +131,7 @@ void setup()
   xTaskCreatePinnedToCore(
       WebAndTasksCode, /* 任務函式 */
       "WebAndTasks",   /* 任務名稱 */
-      16384,            /* 堆疊大小 (Stack size) */
+      24576,            /* 堆疊大小 (Stack size) — increased for WiFiClientSecure TLS */
       NULL,            /* 傳入參數 */
       1,               /* 優先級 */
       &WebTaskHandle,  /* 任務句柄 */
