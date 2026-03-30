@@ -70,7 +70,10 @@ void handleDeepSleep()
         esp_sleep_enable_timer_wakeup(sleepUs);
         Serial.printf("[SLEEP] Timer wake-up set: %d seconds (next schedule)\n", seconds);
     } else {
-        Serial.println("[SLEEP] No schedule entries or time not synced — button wake-up only");
+        // No schedule or time unknown — use fallback interval to retry NTP on next boot
+        uint64_t sleepUs = (uint64_t)FALLBACK_WAKEUP_SEC * 1000000ULL;
+        esp_sleep_enable_timer_wakeup(sleepUs);
+        Serial.printf("[SLEEP] No valid schedule — fallback wake-up in %d seconds\n", FALLBACK_WAKEUP_SEC);
     }
 #else
     Serial.println("[SLEEP] No schedule module — button wake-up only");

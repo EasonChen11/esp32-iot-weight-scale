@@ -65,20 +65,29 @@ void handleAutoLogging()
     // --- Logic A: Initial startup record ---
     if (!startupRecordDone && (currentMillis - bootTime >= STARTUP_RECORD_DELAY_MS))
     {
-        if (timeReliable)
+        bool timedOut = (currentMillis - bootTime >= TIME_SYNC_TIMEOUT_MS);
+
+        if (timeReliable || timedOut)
         {
             long id = getNextRecordId();
-            String dateStr = getLogDate();
-            String timeStr = getLogTimestamp();
+            String dateStr = timeReliable ? getLogDate() : "no-sync";
+            String timeStr = timeReliable ? getLogTimestamp() : "no-sync";
             String s1Str = String(getCachedWeight1(), 3);
             String s2Str = String(getCachedWeight2(), 3);
 
             addRecordToStorage(id, dateStr, timeStr, s1Str, s2Str);
 
             startupRecordDone = true;
-            Serial.printf("[AutoLogger] Initial record saved (ID=%ld, %s %s): S1=%.3f S2=%.3f kg\n",
-                          id, dateStr.c_str(), timeStr.c_str(),
-                          getCachedWeight1(), getCachedWeight2());
+            if (timedOut && !timeReliable)
+            {
+                Serial.printf("[AutoLogger] Time sync timeout — record saved without time (ID=%ld)\n", id);
+            }
+            else
+            {
+                Serial.printf("[AutoLogger] Initial record saved (ID=%ld, %s %s): S1=%.3f S2=%.3f kg\n",
+                              id, dateStr.c_str(), timeStr.c_str(),
+                              getCachedWeight1(), getCachedWeight2());
+            }
         }
         else
         {

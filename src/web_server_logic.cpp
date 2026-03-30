@@ -90,19 +90,25 @@ void initWebRoutes(WebServer &server)
 
     server.on("/sync", [&server]()
               {
-                  if (server.hasArg("t")) {
-                      time_t t = (time_t)server.arg("t").substring(0, 10).toInt();
-                      struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
-                      settimeofday(&tv, NULL);
-#if NTP_ENABLED
-                      setTimeSynced(true);
-#endif
-                      Serial.print("[Web] Time synchronized: ");
-                      Serial.println(t);
-                      server.send(200, "text/plain", "OK");
-                  } else {
+                  if (!server.hasArg("t")) {
                       server.send(400, "text/plain", "Missing time parameter");
-                  } });
+                      return;
+                  }
+#if NTP_ENABLED
+                  if (isTimeSynced()) {
+                      Serial.println("[Web] /sync skipped — NTP already synced");
+                      server.send(200, "text/plain", "NTP");
+                      return;
+                  }
+#endif
+                  time_t t = (time_t)server.arg("t").substring(0, 10).toInt();
+                  struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
+                  settimeofday(&tv, NULL);
+#if NTP_ENABLED
+                  setTimeSynced(true);
+#endif
+                  Serial.printf("[Web] Time synchronized via browser: %ld\n", (long)t);
+                  server.send(200, "text/plain", "OK"); });
 
     server.on("/time", [&server]()
               {
@@ -191,6 +197,11 @@ void initWebRoutes(WebServer &server)
                   String result = triggerGoogleSheetsSync();
                   server.send(200, "text/plain", result); });
 #endif
+
+    server.onNotFound([&server]()
+              {
+                  Serial.printf("[Web] 404: %s %s\n", server.method() == HTTP_GET ? "GET" : "POST", server.uri().c_str());
+                  server.send(404, "text/plain", "Not Found"); });
 
     server.begin();
 }
