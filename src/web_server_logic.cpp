@@ -139,6 +139,9 @@ void initWebRoutes(WebServer &server)
     server.on("/clear-records", [&server]()
               {
                   clearRecordsInStorage();
+#if SIMULATE_SENSOR
+                  resetRecordId();
+#endif
                   server.send(200, "application/json", "[]"); });
 
     // ── Absolute zero calibration ─────────────────────────────────────

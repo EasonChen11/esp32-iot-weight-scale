@@ -52,3 +52,13 @@ long getNextRecordId()
 
   return id;
 }
+
+void resetRecordId()
+{
+  Preferences preferences;
+  preferences.begin("scale_data", false);
+  preferences.remove("record_id");
+  preferences.end();
+
+  Serial.println("[Storage] Record ID counter reset to 0");
+}

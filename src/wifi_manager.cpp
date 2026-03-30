@@ -32,9 +32,9 @@ void initWiFi()
     Serial.printf("[WiFi] Web interface (AP): http://%s\n",
                   WiFi.softAPIP().toString().c_str());
 
-    // ── STA interface (home network → MQTT broker) ────────────────────
+    // ── STA interface (home network → internet services) ───────────────
     WiFi.begin(STA_WIFI_SSID, STA_WIFI_PASS);
-    Serial.printf("[WiFi] Connecting to '%s' for MQTT", STA_WIFI_SSID);
+    Serial.printf("[WiFi] Connecting to '%s'", STA_WIFI_SSID);
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 30) // 30 × 500 ms = 15 s
@@ -47,11 +47,13 @@ void initWiFi()
     if (WiFi.status() == WL_CONNECTED)
     {
         Serial.printf("\n[WiFi] STA connected! IP: %s\n", WiFi.localIP().toString().c_str());
+#if MQTT_ENABLED
         Serial.printf("[WiFi] MQTT broker: %s:%d\n", MQTT_BROKER_IP, MQTT_BROKER_PORT);
+#endif
     }
     else
     {
-        Serial.println("\n[WiFi] STA connection failed — MQTT unavailable.");
+        Serial.println("\n[WiFi] STA connection failed.");
         Serial.println("[WiFi] Web server still accessible via AP.");
     }
 }
