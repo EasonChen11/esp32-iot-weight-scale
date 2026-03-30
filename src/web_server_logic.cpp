@@ -10,6 +10,9 @@
 #endif
 #include <time.h>
 #include <LittleFS.h>
+#if NTP_ENABLED
+#include "wifi_manager.h"
+#endif
 
 /*
 Initialize and register all HTTP routes for the web server.
@@ -87,6 +90,9 @@ void initWebRoutes(WebServer &server)
                       time_t t = (time_t)server.arg("t").substring(0, 10).toInt();
                       struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
                       settimeofday(&tv, NULL);
+#if NTP_ENABLED
+                      setTimeSynced(true);
+#endif
                       Serial.print("[Web] Time synchronized: ");
                       Serial.println(t);
                       server.send(200, "text/plain", "OK");

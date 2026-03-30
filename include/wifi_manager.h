@@ -20,6 +20,8 @@ void initWiFi();
 
 #if NTP_ENABLED
 void initNTP();
+bool isTimeSynced();
+void setTimeSynced(bool synced);
 #endif
 
 #endif // WIFI_ENABLED

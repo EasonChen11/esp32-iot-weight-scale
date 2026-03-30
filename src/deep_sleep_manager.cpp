@@ -10,6 +10,9 @@
 #if SCHEDULE_ENABLED
 #include "schedule_manager.h"
 #endif
+#if NTP_ENABLED
+#include "wifi_manager.h"
+#endif
 
 static unsigned long bootTimeMs = 0;
 static bool sleepTriggered = false;
@@ -56,6 +59,13 @@ void handleDeepSleep()
 #if SCHEDULE_ENABLED
     int seconds = getNextWakeupSeconds();
     if (seconds > 0) {
+#if NTP_ENABLED
+        // 未校時時提早 2 分鐘喚醒，補償 RTC 漂移並讓下次 boot 有機會重試 NTP
+        if (!isTimeSynced() && seconds > 180) {
+            seconds -= 120;
+            Serial.println("[SLEEP] Time not synced — waking 2 min early for drift margin");
+        }
+#endif
         uint64_t sleepUs = (uint64_t)seconds * 1000000ULL;
         esp_sleep_enable_timer_wakeup(sleepUs);
         Serial.printf("[SLEEP] Timer wake-up set: %d seconds (next schedule)\n", seconds);

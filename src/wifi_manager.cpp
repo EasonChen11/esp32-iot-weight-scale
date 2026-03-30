@@ -58,6 +58,19 @@ void initWiFi()
 
 #if NTP_ENABLED
 #include <time.h>
+#include "esp_sntp.h"
+
+static bool _timeSynced = false;
+
+bool isTimeSynced()
+{
+    return _timeSynced;
+}
+
+void setTimeSynced(bool synced)
+{
+    _timeSynced = synced;
+}
 
 void initNTP()
 {
@@ -66,23 +79,41 @@ void initNTP()
         return;
     }
 
+    // Log old RTC time (kept as fallback if NTP fails)
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo)) {
+        char buf[20];
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
+        Serial.printf("[NTP] RTC time before sync: %s\n", buf);
+    } else {
+        Serial.println("[NTP] No RTC time available");
+    }
+
+    // 重置同步狀態，避免深度睡眠醒來後繼承上次 boot 的舊 COMPLETED 狀態
+    sntp_set_sync_status(SNTP_SYNC_STATUS_RESET);
+
     configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2);
     Serial.print("[NTP] Synchronizing");
 
-    struct tm timeinfo;
+    // 用 sntp_get_sync_status() 取代 getLocalTime() 來偵測同步
+    // getLocalTime() 在深度睡眠後會因 RTC 舊時間立刻回傳 true（假陽性）
+    // sntp_get_sync_status() 只有收到真正 NTP 回應才回傳 COMPLETED
     int retries = 0;
-    while (!getLocalTime(&timeinfo) && retries < 10) {
+    while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED && retries < 20) {
         delay(500);
         Serial.print(".");
         retries++;
     }
 
-    if (getLocalTime(&timeinfo)) {
+    if (sntp_get_sync_status() == SNTP_SYNC_STATUS_COMPLETED) {
+        _timeSynced = true;
+        getLocalTime(&timeinfo);
         char buf[20];
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &timeinfo);
         Serial.printf("\n[NTP] Time synced: %s\n", buf);
     } else {
-        Serial.println("\n[NTP] Sync failed — will rely on browser /sync fallback");
+        _timeSynced = false;
+        Serial.println("\n[NTP] Sync failed — RTC time preserved as fallback");
     }
 }
 #endif // NTP_ENABLED

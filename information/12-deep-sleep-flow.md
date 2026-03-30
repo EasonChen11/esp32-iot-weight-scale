@@ -86,6 +86,11 @@ sleepTriggered = true
     │    Yes: getNextWakeupSeconds()
     │         │
     │         ├─ > 0: 有排程
+    │         │       │
+    │         │       ├─ NTP_ENABLED && !isTimeSynced() && seconds > 180 ?
+    │         │       │       └─ Yes: seconds -= 120（提早 2 分鐘喚醒補償 RTC 漂移）
+    │         │       │              "[SLEEP] Time not synced — waking 2 min early"
+    │         │       │
     │         │       sleepUs = seconds * 1,000,000
     │         │       esp_sleep_enable_timer_wakeup(sleepUs)
     │         │       "[SLEEP] Timer wake-up set: X seconds"
@@ -165,9 +170,9 @@ Timer 到期 → 重新開機（回到頂部）
   → 時間到 → 自動喚醒
 
 情境 2：有排程但時間未同步（NTP 失敗 + 沒人開網頁）
-  → getNextWakeupSeconds() return -1
-  → 不設定 timer → 僅按鈕喚醒
-  → 按按鈕才能喚醒
+  → RTC 有舊時間 → getNextWakeupSeconds() 仍可計算（基於漂移後的時間）
+  → isTimeSynced() = false → 提早 2 分鐘喚醒補償漂移
+  → 若 RTC 完全沒時間 → getNextWakeupSeconds() return -1 → 僅按鈕喚醒
 
 情境 3：沒有排程項目
   → getNextWakeupSeconds() return -1

@@ -3,6 +3,9 @@
 #include "auto_logger.h"
 #include "sensor_manager.h"
 #include "storage/littlefs_storage.h"
+#if NTP_ENABLED
+#include "wifi_manager.h"
+#endif
 #include <time.h>
 
 // State tracking for logging events
@@ -54,13 +57,19 @@ void handleAutoLogging()
 {
     unsigned long currentMillis = millis();
     struct tm timeinfo;
-    bool isTimeSynced = getLocalTime(&timeinfo);
+    bool hasTime = getLocalTime(&timeinfo);
+#if NTP_ENABLED
+    // hasTime 只代表 RTC 有值，isTimeSynced() 才代表經過 NTP 或 /sync 校時
+    bool timeReliable = hasTime && isTimeSynced();
+#else
+    bool timeReliable = hasTime;
+#endif
 
     // --- Logic A: Initial startup record ---
     // Condition: Delay has passed AND system time is synchronized
     if (!startupRecordDone && (currentMillis - bootTime >= STARTUP_RECORD_DELAY_MS))
     {
-        if (isTimeSynced)
+        if (timeReliable)
         {
             float weight = getCachedWeight();
             String timeStr = getLogTimestamp();
@@ -84,7 +93,7 @@ void handleAutoLogging()
 
     // --- Logic B: Hourly logging (disabled in deep sleep mode) ---
 #if !DEEP_SLEEP_ENABLED
-    if (isTimeSynced)
+    if (timeReliable)
     {
         if (timeinfo.tm_hour != lastRecordedHour)
         {

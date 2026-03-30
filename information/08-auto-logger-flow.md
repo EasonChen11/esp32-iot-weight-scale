@@ -35,13 +35,17 @@ Serial: "Service initialized. Waiting for stability and time sync..."
 ```
 handleAutoLogging()
     │
+    │  hasTime = getLocalTime()          ← RTC 是否有時間值
+    │  timeReliable = hasTime && isTimeSynced()  ← 時間是否經過可靠校時
+    │  （NTP_ENABLED 時才檢查 isTimeSynced()，否則 timeReliable = hasTime）
+    │
     ├─── Logic A: 開機紀錄
     │    │
     │    ├─ startupRecordDone == true ? → 跳過
     │    │
     │    ├─ millis() - bootTime < 10000ms ? → 跳過（等待穩定）
     │    │
-    │    ├─ 時間已同步 (getLocalTime) ?
+    │    ├─ timeReliable ?
     │    │       │
     │    │  No:  每 5 秒印一次 "Waiting for time sync..."
     │    │       └─ return（不記錄）
@@ -57,7 +61,7 @@ handleAutoLogging()
          │
          ├─ DEEP_SLEEP_ENABLED == true ? → 編譯時排除，不執行
          │
-         ├─ 時間未同步 → 跳過
+         ├─ timeReliable == false → 跳過
          │
          ├─ timeinfo.tm_hour == lastRecordedHour ? → 跳過（同一小時）
          │
@@ -107,7 +111,7 @@ initNTP()
 configTime(28800, 0, "pool.ntp.org", "time.nist.gov")
   │
   ▼
-等待最多 5 秒 → getLocalTime() 成功
+等待最多 10 秒 → sntp_get_sync_status() == COMPLETED
   │
   ▼
 時間已同步，Auto-logger 可以立即開始記錄
