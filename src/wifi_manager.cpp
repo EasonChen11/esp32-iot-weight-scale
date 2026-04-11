@@ -2,6 +2,20 @@
 #if WIFI_ENABLED
 #include <WiFi.h>
 #include "wifi_manager.h"
+#if WIFI_CONFIG_ENABLED
+#include "storage/nvs_storage.h"
+#endif
+
+// ── Runtime WiFi state (single writer: Core 0 web/task loop) ────────
+static volatile WifiStatus    g_wifiStatus     = WIFI_STATUS_DISCONNECTED;
+#if WIFI_CONFIG_ENABLED
+static volatile bool          g_wifiOpBusy     = false;
+static volatile unsigned long g_connectStartMs = 0;
+static volatile bool          g_pendingNtpSync = false;
+static String                 g_currentSsid;
+static String                 g_pendingSsid;
+static String                 g_pendingPass;
+#endif
 
 /*
 Initialize WiFi in AP+STA mode so both interfaces are active simultaneously.
