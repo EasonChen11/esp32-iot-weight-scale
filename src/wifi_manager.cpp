@@ -137,7 +137,7 @@ bool requestStaChange(const String &ssid, const String &pass, String &errorOut)
     g_connectStartMs = millis();
     g_wifiStatus     = WIFI_STATUS_CONNECTING;
 
-    WiFi.disconnect(false, true);  // keep AP up; clear stored STA config
+    WiFi.disconnect(false, true);  // keep AP up; stop current STA connection
     WiFi.begin(ssid.c_str(), pass.c_str());
     Serial.printf("[WiFi] Runtime switch requested: '%s'\n", ssid.c_str());
     return true;
@@ -188,7 +188,7 @@ void processWifiTasks()
     if (g_pendingNtpSync) {
         g_pendingNtpSync = false;
 #if NTP_ENABLED
-        initNTP();
+        triggerNtpResync();
 #endif
     }
 }
@@ -264,6 +264,23 @@ void initNTP()
     } else {
         Serial.println("\n[NTP] Sync failed after 30s — RTC time preserved as fallback");
     }
+}
+
+/*
+Non-blocking NTP re-sync. Configures SNTP and returns immediately.
+The existing ntpSyncCallback handles the actual time update asynchronously.
+Safe to call from processWifiTasks() in the WebAndTasks loop.
+*/
+void triggerNtpResync()
+{
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("[NTP] Re-sync skipped — STA not connected");
+        return;
+    }
+    sntp_set_sync_status(SNTP_SYNC_STATUS_RESET);
+    _timeSynced = false;
+    configTime(NTP_GMT_OFFSET_SEC, NTP_DAYLIGHT_OFFSET_SEC, NTP_SERVER1, NTP_SERVER2, NTP_SERVER3);
+    Serial.println("[NTP] Re-sync triggered (non-blocking)");
 }
 #endif // NTP_ENABLED
 

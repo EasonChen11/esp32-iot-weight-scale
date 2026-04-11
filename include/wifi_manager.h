@@ -39,6 +39,7 @@ void   processWifiTasks();
 
 #if NTP_ENABLED
 void initNTP();
+void triggerNtpResync();
 bool isTimeSynced();
 void setTimeSynced(bool synced);
 #endif
