@@ -64,7 +64,10 @@ void initSensor(long savedOffset1, long savedOffset2)
     Serial.println("[Sensor] Initializing sensor 1...");
     if (scale1.wait_ready_timeout(2000))
     {
-        scale1.set_scale(LOADCELL1_SCALE_FACTOR);
+        float factor1 = hasScaleFactor1() ? getScaleFactor1() : LOADCELL1_SCALE_FACTOR;
+        scale1.set_scale(factor1);
+        Serial.printf("[Sensor] Sensor 1 scale factor: %.2f%s\n",
+                      factor1, hasScaleFactor1() ? " (NVS)" : " (default)");
         Serial.println("[Sensor] Sensor 1 ready");
     }
     else
@@ -91,7 +94,10 @@ void initSensor(long savedOffset1, long savedOffset2)
     Serial.println("[Sensor] Initializing sensor 2...");
     if (scale2.wait_ready_timeout(2000))
     {
-        scale2.set_scale(LOADCELL2_SCALE_FACTOR);
+        float factor2 = hasScaleFactor2() ? getScaleFactor2() : LOADCELL2_SCALE_FACTOR;
+        scale2.set_scale(factor2);
+        Serial.printf("[Sensor] Sensor 2 scale factor: %.2f%s\n",
+                      factor2, hasScaleFactor2() ? " (NVS)" : " (default)");
         Serial.println("[Sensor] Sensor 2 ready");
 
         if (savedOffset2 != 0)
