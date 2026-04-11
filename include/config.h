@@ -12,7 +12,7 @@
 #define OLED_ENABLED true
 #define GOOGLE_SHEETS_ENABLED true
 #define WIFI_CONFIG_ENABLED true
-#define SIMULATE_SENSOR true
+#define SIMULATE_SENSOR false
 
 // WiFi & MQTT credentials — kept in a .gitignored file
 // Copy config_secrets.h.example → config_secrets.h and fill in your values
@@ -70,8 +70,8 @@ const float LOADCELL2_SCALE_FACTOR = 85000.0;
 // Auto-logger
 const unsigned long STARTUP_RECORD_DELAY_MS = 10000;
 const unsigned long AUTO_RECORD_INTERVAL_MS = 3600000;
-const unsigned long TIME_SYNC_TIMEOUT_MS = 60000; // Max wait for time sync before saving with "no-sync"
-const int MAX_RECORDS = 50;
+const unsigned long TIME_SYNC_TIMEOUT_MS = 300000; // Max wait for time sync (5 min) — gives user time to configure WiFi via /network
+const int MAX_RECORDS = 200;
 
 // Deep-sleep fallback interval when time is unknown (seconds)
 const int FALLBACK_WAKEUP_SEC = 3600; // 1 hour

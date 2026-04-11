@@ -90,9 +90,10 @@ String getIndexHTML()
         .btn-clear-all:hover { background-color: #f8f9fa; color: #e74c3c; border-color: #e74c3c; }
 
         .table-container { margin-top: 16px; border-top: 2px solid #eee; padding-top: 16px; }
+        .table-scroll { max-height: 320px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 10px 6px; border-bottom: 1px solid #eee; text-align: center; }
-        th { background-color: #f8f9fa; color: #666; }
+        th { background-color: #f8f9fa; color: #666; position: sticky; top: 0; z-index: 1; }
         .btn-del { background: none; color: #e74c3c; box-shadow: none;
                    padding: 4px; font-size: 14px; width: auto; }
 
@@ -176,21 +177,23 @@ String getIndexHTML()
             </div>
 
             <div class="table-container">
-                <h3 style="color:#555; font-size:15px;">Data Records (Max 50)</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Date</th>
-                            <th>Time</th>
-                            <th>S1 (kg)</th>
-                            <th>S2 (kg)</th>
-                            <th>Total (kg)</th>
-                            <th>Del</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recordBody"></tbody>
-                </table>
+                <h3 style="color:#555; font-size:15px;">Data Records (Max 200)</h3>
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>S1 (kg)</th>
+                                <th>S2 (kg)</th>
+                                <th>Total (kg)</th>
+                                <th>Del</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordBody"></tbody>
+                    </table>
+                </div>
                 <button class="btn-clear-all" onclick="clearAll()">Clear All Records</button>
             </div>
         </div>
