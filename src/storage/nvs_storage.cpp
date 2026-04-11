@@ -104,3 +104,57 @@ void clearStaCredentials()
   prefs.end();
   Serial.println("[Storage] WiFi credentials cleared");
 }
+
+void saveScaleFactor1(float factor)
+{
+  Preferences prefs;
+  prefs.begin("scale_data", false);
+  prefs.putFloat("scale1", factor);
+  prefs.end();
+  Serial.printf("[Storage] Sensor 1 scale factor saved: %.2f\n", factor);
+}
+
+float getScaleFactor1()
+{
+  Preferences prefs;
+  prefs.begin("scale_data", true);
+  float factor = prefs.getFloat("scale1", 0.0f);
+  prefs.end();
+  return factor;
+}
+
+bool hasScaleFactor1()
+{
+  Preferences prefs;
+  prefs.begin("scale_data", true);
+  bool has = prefs.isKey("scale1");
+  prefs.end();
+  return has;
+}
+
+void saveScaleFactor2(float factor)
+{
+  Preferences prefs;
+  prefs.begin("scale_data", false);
+  prefs.putFloat("scale2", factor);
+  prefs.end();
+  Serial.printf("[Storage] Sensor 2 scale factor saved: %.2f\n", factor);
+}
+
+float getScaleFactor2()
+{
+  Preferences prefs;
+  prefs.begin("scale_data", true);
+  float factor = prefs.getFloat("scale2", 0.0f);
+  prefs.end();
+  return factor;
+}
+
+bool hasScaleFactor2()
+{
+  Preferences prefs;
+  prefs.begin("scale_data", true);
+  bool has = prefs.isKey("scale2");
+  prefs.end();
+  return has;
+}
