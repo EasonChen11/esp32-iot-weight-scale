@@ -30,7 +30,9 @@ void initWebRoutes(WebServer &server)
 {
     // Root: serve the main dashboard
     server.on("/", [&server]()
-              { server.send(200, "text/html", getIndexHTML()); });
+              {
+                  server.sendHeader("Cache-Control", "max-age=300, must-revalidate");
+                  server.send(200, "text/html", getIndexHTML()); });
 
     // Chart.js served locally from LittleFS (no CDN — works in AP mode)
     // Browser caches for 24 h so subsequent loads are instant
@@ -58,31 +60,40 @@ void initWebRoutes(WebServer &server)
 
     // Total weight (sum of both sensors) — also used by legacy clients
     server.on("/data", [&server]()
-              { server.send(200, "text/plain", String(getCachedWeight(), 2)); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "text/plain", String(getCachedWeight(), 2)); });
 
     // Sensor 1 weight
     server.on("/data1", [&server]()
-              { server.send(200, "text/plain", String(getCachedWeight1(), 2)); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "text/plain", String(getCachedWeight1(), 2)); });
 
     // Sensor 2 weight
     server.on("/data2", [&server]()
-              { server.send(200, "text/plain", String(getCachedWeight2(), 2)); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "text/plain", String(getCachedWeight2(), 2)); });
 
     // ── Tare endpoints ────────────────────────────────────────────────
 
     server.on("/tare1", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   tareSensor1();
                   server.send(200, "text/plain", "Sensor 1 tare completed"); });
 
     server.on("/tare2", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   tareSensor2();
                   server.send(200, "text/plain", "Sensor 2 tare completed"); });
 
     // Tare both sensors
     server.on("/tare", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   tareSensor();
                   server.send(200, "text/plain", "Both sensors tare completed"); });
 
@@ -90,6 +101,7 @@ void initWebRoutes(WebServer &server)
 
     server.on("/sync", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   if (!server.hasArg("t")) {
                       server.send(400, "text/plain", "Missing time parameter");
                       return;
@@ -112,6 +124,7 @@ void initWebRoutes(WebServer &server)
 
     server.on("/time", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   struct tm timeinfo;
                   if (!getLocalTime(&timeinfo)) {
                       server.send(200, "text/plain", "Not synced");
@@ -125,13 +138,18 @@ void initWebRoutes(WebServer &server)
     // ── Dynamic WiFi configuration ────────────────────────────────────
 
     server.on("/network", [&server]()
-              { server.send(200, "text/html", getNetworkPageHTML()); });
+              {
+                  server.sendHeader("Cache-Control", "max-age=300, must-revalidate");
+                  server.send(200, "text/html", getNetworkPageHTML()); });
 
     server.on("/wifi-status", [&server]()
-              { server.send(200, "application/json", getWifiStatusJson()); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "application/json", getWifiStatusJson()); });
 
     server.on("/network/scan", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   String json = scanNetworksJson();
                   if (json.startsWith("{\"error\":\"busy\"")) {
                       server.send(409, "application/json", json);
@@ -143,6 +161,7 @@ void initWebRoutes(WebServer &server)
 
     server.on("/network/save", HTTP_POST, [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   String ssid = server.arg("s");
                   String pass = server.arg("p");
                   String err;
@@ -162,6 +181,7 @@ void initWebRoutes(WebServer &server)
 
     server.on("/network/clear", HTTP_POST, [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   clearStaCredentials();
                   server.send(200, "application/json",
                               "{\"status\":\"cleared\"}"); });
@@ -170,10 +190,13 @@ void initWebRoutes(WebServer &server)
     // ── Record management ─────────────────────────────────────────────
 
     server.on("/get-records", [&server]()
-              { server.send(200, "application/json", getRecordsJson()); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "application/json", getRecordsJson()); });
 
     server.on("/add-record", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   String t  = server.arg("t");
                   String d  = server.arg("d");
                   String s1 = server.arg("s1");
@@ -184,12 +207,14 @@ void initWebRoutes(WebServer &server)
 
     server.on("/del-record", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   int index = server.arg("i").toInt();
                   deleteRecordFromStorage(index);
                   server.send(200, "application/json", getRecordsJson()); });
 
     server.on("/clear-records", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   clearRecordsInStorage();
 #if SIMULATE_SENSOR
                   resetRecordId();
@@ -201,6 +226,7 @@ void initWebRoutes(WebServer &server)
     // Calibrate sensor 1
     server.on("/set-zero1", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   long newOffset = captureAbsoluteOffset1();
                   saveAbsoluteOffset(newOffset);
                   Serial.printf("[Web] Sensor 1 calibration done. Offset: %ld\n", newOffset);
@@ -209,6 +235,7 @@ void initWebRoutes(WebServer &server)
     // Calibrate sensor 2
     server.on("/set-zero2", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   long newOffset = captureAbsoluteOffset2();
                   saveAbsoluteOffset2(newOffset);
                   Serial.printf("[Web] Sensor 2 calibration done. Offset: %ld\n", newOffset);
@@ -218,10 +245,13 @@ void initWebRoutes(WebServer &server)
 
 #if SCHEDULE_ENABLED
     server.on("/get-schedule", [&server]()
-              { server.send(200, "application/json", getScheduleJson()); });
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  server.send(200, "application/json", getScheduleJson()); });
 
     server.on("/add-schedule", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   int h = server.arg("h").toInt();
                   int m = server.arg("m").toInt();
                   if (addScheduleEntry(h, m)) {
@@ -232,6 +262,7 @@ void initWebRoutes(WebServer &server)
 
     server.on("/del-schedule", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   int idx = server.arg("i").toInt();
                   removeScheduleEntry(idx);
                   server.send(200, "application/json", getScheduleJson()); });
@@ -240,6 +271,7 @@ void initWebRoutes(WebServer &server)
 #if GOOGLE_SHEETS_ENABLED
     server.on("/sync-sheets", [&server]()
               {
+                  server.sendHeader("Cache-Control", "no-store");
                   String result = triggerGoogleSheetsSync();
                   server.send(200, "text/plain", result); });
 #endif

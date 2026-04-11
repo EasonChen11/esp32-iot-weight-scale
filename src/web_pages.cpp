@@ -538,7 +538,7 @@ String getNetworkPageHTML()
 
   <div class="card">
     <h2>Available Networks <button class="scan" onclick="doScan()">&#x21bb; Rescan</button></h2>
-    <div id="scanList"><p style="color:#95a5a6; text-align:center;">Scanning...</p></div>
+    <div id="scanList"><p style="color:#95a5a6; text-align:center;">Click &#x21bb; Rescan to find networks</p></div>
   </div>
 
   <div class="card" id="formCard" style="display:none;">
@@ -750,7 +750,6 @@ window.onload = function() {
       $('connectBtn').innerText = 'Connecting to ' + (s.target_ssid || '...');
       startPolling();
     }
-    doScan();
   });
 };
 </script>
