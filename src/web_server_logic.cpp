@@ -254,6 +254,44 @@ void initWebRoutes(WebServer &server)
                   Serial.printf("[Web] Sensor 2 calibration done. Offset: %ld\n", newOffset);
                   server.send(200, "text/plain", "OK"); });
 
+    // ── Scale factor calibration ──────────────────────────────────────
+
+    server.on("/calibrate-scale1", [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  if (!server.hasArg("w")) {
+                      server.send(400, "application/json", "{\"error\":\"缺少重量參數\"}");
+                      return;
+                  }
+                  float w = server.arg("w").toFloat();
+                  String err;
+                  float newFactor = calibrateScaleFactor1(w, err);
+                  if (newFactor < 0.0f) {
+                      String body = "{\"error\":\"" + err + "\"}";
+                      server.send(400, "application/json", body);
+                      return;
+                  }
+                  String body = "{\"factor\":" + String(newFactor, 2) + "}";
+                  server.send(200, "application/json", body); });
+
+    server.on("/calibrate-scale2", [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  if (!server.hasArg("w")) {
+                      server.send(400, "application/json", "{\"error\":\"缺少重量參數\"}");
+                      return;
+                  }
+                  float w = server.arg("w").toFloat();
+                  String err;
+                  float newFactor = calibrateScaleFactor2(w, err);
+                  if (newFactor < 0.0f) {
+                      String body = "{\"error\":\"" + err + "\"}";
+                      server.send(400, "application/json", body);
+                      return;
+                  }
+                  String body = "{\"factor\":" + String(newFactor, 2) + "}";
+                  server.send(200, "application/json", body); });
+
     // ── Wake-up schedule management ──────────────────────────────────────
 
 #if SCHEDULE_ENABLED
