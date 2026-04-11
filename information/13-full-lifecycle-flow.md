@@ -35,6 +35,13 @@
     │              │      │    (WiFi 模式不變)
     │              │      │       │
     │              ▼      ▼       ▼
+    │
+    │  > **WiFi 開機 Fallback (新增於 #28)**
+    │  >
+    │  > 開機時 `initWiFi()` 會先試 NVS 儲存的 SSID（8 秒 timeout），失敗才 fallback 到 `config_secrets.h` 的 compile-time SSID（再 8 秒 timeout）。最壞情況約 16 秒；web server 在這之後才啟動（同步阻塞，避免初始化階段的 race condition）。
+    │  >
+    │  > 詳見 [`05-wifi-flow.md`](05-wifi-flow.md)。
+    │
     │              initNTP()
     │              │
     │         STA 有連線？
