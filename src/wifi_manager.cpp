@@ -101,6 +101,11 @@ void initWiFi()
     }
 
     Serial.println("\n[WiFi] Boot fallback exhausted — AP only");
+    // Stop the WiFi driver from retrying STA in the background.
+    // Otherwise it keeps re-attempting the last SSID every few seconds and
+    // steals radio time from the AP, making the web UI sluggish.
+    WiFi.disconnect(false, true);     // keep WiFi mode (AP up), erase STA config
+    WiFi.setAutoReconnect(false);     // disable background reconnect attempts
     g_wifiStatus = WIFI_STATUS_DISCONNECTED;
 }
 
@@ -137,7 +142,8 @@ bool requestStaChange(const String &ssid, const String &pass, String &errorOut)
     g_connectStartMs = millis();
     g_wifiStatus     = WIFI_STATUS_CONNECTING;
 
-    WiFi.disconnect(false, true);  // keep AP up; stop current STA connection
+    WiFi.disconnect(false, true);     // keep AP up; stop current STA connection
+    WiFi.setAutoReconnect(true);      // re-enable in case it was disabled by boot fallback
     WiFi.begin(ssid.c_str(), pass.c_str());
     Serial.printf("[WiFi] Runtime switch requested: '%s'\n", ssid.c_str());
     return true;
