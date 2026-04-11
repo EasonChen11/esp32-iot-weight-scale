@@ -2,6 +2,7 @@
 .pio
 .vscode
 nodered_data
+.worktrees/
 
 # Secrets (WiFi / MQTT credentials)
 include/config_secrets.h
