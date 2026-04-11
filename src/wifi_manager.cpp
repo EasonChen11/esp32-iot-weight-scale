@@ -18,13 +18,33 @@ static String                 g_pendingPass;
 #endif
 
 /*
+Attempt to join the given SSID for up to timeoutMs. Returns true on success.
+Polls every 100 ms; uses millis() rather than a fixed loop count so the timeout
+is honoured precisely.
+*/
+static bool connectToStation(const char *ssid, const char *pass, unsigned long timeoutMs)
+{
+    WiFi.begin(ssid, pass);
+    unsigned long startMs = millis();
+    while (WiFi.status() != WL_CONNECTED) {
+        if (millis() - startMs >= timeoutMs) {
+            return false;
+        }
+        delay(100);
+        Serial.print(".");
+    }
+    return true;
+}
+
+/*
 Initialize WiFi in AP+STA mode so both interfaces are active simultaneously.
 
 Connection flow:
   1. Start Soft-AP immediately (AP_WIFI_SSID / AP_WIFI_PASS).
      → Web server is reachable at the AP gateway IP (default 192.168.4.1)
        by any phone or device that connects to the ESP32 hotspot.
-  2. Attempt to join STA_WIFI_SSID for up to 15 seconds.
+  2. If WIFI_CONFIG_ENABLED: try NVS-stored SSID/pass for WIFI_CONNECT_TIMEOUT_MS.
+  3. Fall back to compile-time STA_WIFI_SSID for WIFI_CONNECT_TIMEOUT_MS.
      → On success: MQTT broker becomes reachable via the STA DHCP IP.
      → On failure: AP remains up; web server still works; MQTT unavailable.
 
@@ -39,37 +59,49 @@ void initWiFi()
     // Run both AP and STA interfaces concurrently
     WiFi.mode(WIFI_AP_STA);
 
-    // ── AP interface (web server for phones / local devices) ──────────
+    // ── AP interface (always on) ───────────────────────────────────────
     WiFi.softAP(AP_WIFI_SSID, AP_WIFI_PASS);
     Serial.printf("[WiFi] AP started: SSID='%s'  IP: %s\n",
                   AP_WIFI_SSID, WiFi.softAPIP().toString().c_str());
     Serial.printf("[WiFi] Web interface (AP): http://%s\n",
                   WiFi.softAPIP().toString().c_str());
 
-    // ── STA interface (home network → internet services) ───────────────
-    WiFi.begin(STA_WIFI_SSID, STA_WIFI_PASS);
-    Serial.printf("[WiFi] Connecting to '%s'", STA_WIFI_SSID);
-
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 30) // 30 × 500 ms = 15 s
-    {
-        delay(500);
-        Serial.print(".");
-        attempts++;
+#if WIFI_CONFIG_ENABLED
+    // ── Step 1: try NVS-stored credentials ─────────────────────────────
+    if (hasStoredCredentials()) {
+        String nvsSsid, nvsPass;
+        getStaCredentials(nvsSsid, nvsPass);
+        Serial.printf("[WiFi] Trying stored SSID: '%s'", nvsSsid.c_str());
+        if (connectToStation(nvsSsid.c_str(), nvsPass.c_str(), WIFI_CONNECT_TIMEOUT_MS)) {
+            g_wifiStatus  = WIFI_STATUS_CONNECTED;
+            g_currentSsid = nvsSsid;
+            Serial.printf("\n[WiFi] STA connected via NVS! IP: %s\n",
+                          WiFi.localIP().toString().c_str());
+            return;
+        }
+        Serial.println("\n[WiFi] Stored SSID timeout, falling back to compile-time");
+    } else {
+        Serial.println("[WiFi] No stored credentials, trying compile-time");
     }
+#endif
 
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        Serial.printf("\n[WiFi] STA connected! IP: %s\n", WiFi.localIP().toString().c_str());
+    // ── Step 2: compile-time fallback ──────────────────────────────────
+    Serial.printf("[WiFi] Trying compile-time SSID: '%s'", STA_WIFI_SSID);
+    if (connectToStation(STA_WIFI_SSID, STA_WIFI_PASS, WIFI_CONNECT_TIMEOUT_MS)) {
+        g_wifiStatus = WIFI_STATUS_CONNECTED;
+#if WIFI_CONFIG_ENABLED
+        g_currentSsid = STA_WIFI_SSID;
+#endif
+        Serial.printf("\n[WiFi] STA connected via compile-time! IP: %s\n",
+                      WiFi.localIP().toString().c_str());
 #if MQTT_ENABLED
         Serial.printf("[WiFi] MQTT broker: %s:%d\n", MQTT_BROKER_IP, MQTT_BROKER_PORT);
 #endif
+        return;
     }
-    else
-    {
-        Serial.println("\n[WiFi] STA connection failed.");
-        Serial.println("[WiFi] Web server still accessible via AP.");
-    }
+
+    Serial.println("\n[WiFi] Boot fallback exhausted — AP only");
+    g_wifiStatus = WIFI_STATUS_DISCONNECTED;
 }
 
 #if NTP_ENABLED
