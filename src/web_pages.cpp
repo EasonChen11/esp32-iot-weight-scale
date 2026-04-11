@@ -21,6 +21,26 @@ String getIndexHTML()
 
         #clock { color: #95a5a6; font-size: 13px; margin-bottom: 16px; }
 
+        #netbar { display: flex; align-items: center; gap: 8px;
+                  font-size: 13px; color: #7f8c8d;
+                  max-width: 1100px; margin: 0 auto 8px;
+                  padding: 0 4px; }
+        #netbar .dot { width: 10px; height: 10px; border-radius: 50%;
+                       display: inline-block; }
+        .dot-connected    { background: #27ae60;
+                            animation: heartbeat 1.5s ease-in-out infinite; }
+        .dot-connecting   { background: #f39c12;
+                            animation: heartbeat 0.5s ease-in-out infinite; }
+        .dot-disconnected { background: #95a5a6; }
+        .dot-failed       { background: #e74c3c; }
+        @keyframes heartbeat {
+            0%, 100% { opacity: 1;   transform: scale(1); }
+            50%      { opacity: 0.4; transform: scale(0.85); }
+        }
+        #netLink { margin-left: auto; color: #3498db; text-decoration: none;
+                   padding: 2px 10px; border: 1px solid #3498db; border-radius: 4px; }
+        #netLink:hover { background: #3498db; color: white; }
+
         /* Responsive grid: 1 col on mobile, 3 cols on wider screens */
         .grid {
             display: grid;
@@ -95,6 +115,12 @@ String getIndexHTML()
     </style>
 </head>
 <body>
+    <div id="netbar">
+        <span id="netDot" class="dot dot-disconnected"></span>
+        <span id="netSsid">--</span>
+        <span id="netIp"></span>
+        <a href="/network" id="netLink">&#9881; Network</a>
+    </div>
     <div id="clock">System time: --:--:--</div>
 
     <div class="grid">
@@ -243,6 +269,19 @@ String getIndexHTML()
                 if (chartTotal) pushChart(chartTotal, total);
             }).catch(() => {});
         }, 500);
+
+        /* ── WiFi heartbeat (5 s polling) ───────────────────────────── */
+        function updateNetStatus() {
+            fetch('/wifi-status').then(r => r.json()).then(s => {
+                const dot = document.getElementById('netDot');
+                dot.className = 'dot dot-' + s.status;
+                document.getElementById('netSsid').innerText =
+                    s.current_ssid || (s.target_ssid ? '(connecting to ' + s.target_ssid + ')' : 'Not connected');
+                document.getElementById('netIp').innerText = s.ip ? '\u00b7 ' + s.ip : '';
+            }).catch(() => {});
+        }
+        setInterval(updateNetStatus, 5000);
+        updateNetStatus();
 
         /* ── Clock ──────────────────────────────────────────────────── */
         setInterval(function() {
