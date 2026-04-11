@@ -62,3 +62,45 @@ void resetRecordId()
 
   Serial.println("[Storage] Record ID counter reset to 0");
 }
+
+void saveStaCredentials(const String &ssid, const String &pass)
+{
+  Preferences prefs;
+  prefs.begin("wifi_cfg", false);
+  prefs.putString("ssid", ssid);
+  prefs.putString("pass", pass);
+  prefs.end();
+  Serial.printf("[Storage] WiFi credentials saved: %s\n", ssid.c_str());
+}
+
+bool getStaCredentials(String &ssidOut, String &passOut)
+{
+  Preferences prefs;
+  prefs.begin("wifi_cfg", true);
+  ssidOut = prefs.getString("ssid", "");
+  passOut = prefs.getString("pass", "");
+  prefs.end();
+  return ssidOut.length() > 0;
+}
+
+bool hasStoredCredentials()
+{
+  Preferences prefs;
+  prefs.begin("wifi_cfg", true);
+  bool has = prefs.isKey("ssid");
+  if (has) {
+    has = prefs.getString("ssid", "").length() > 0;
+  }
+  prefs.end();
+  return has;
+}
+
+void clearStaCredentials()
+{
+  Preferences prefs;
+  prefs.begin("wifi_cfg", false);
+  prefs.remove("ssid");
+  prefs.remove("pass");
+  prefs.end();
+  Serial.println("[Storage] WiFi credentials cleared");
+}

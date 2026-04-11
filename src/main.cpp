@@ -59,6 +59,11 @@ void WebAndTasksCode(void *pvParameters)
     server.handleClient();
 #endif
 
+#if WIFI_CONFIG_ENABLED && WIFI_ENABLED
+    // Drive runtime WiFi state machine + deferred NTP sync
+    processWifiTasks();
+#endif
+
 #if AUTO_LOGGER_ENABLED
     // Perform hourly and startup logging (may perform file I/O)
     handleAutoLogging();

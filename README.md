@@ -90,6 +90,7 @@ All modules can be toggled independently in `config.h`:
 ```cpp
 #define WIFI_ENABLED            true
 #define WEB_SERVER_ENABLED      true
+#define WIFI_CONFIG_ENABLED     true
 #define MQTT_ENABLED            false
 #define AUTO_LOGGER_ENABLED     true
 #define OLED_ENABLED            true
@@ -101,6 +102,7 @@ All modules can be toggled independently in `config.h`:
 ```
 
 Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_SHEETS_ENABLED` all require `WIFI_ENABLED`.
+`WIFI_CONFIG_ENABLED` requires `WIFI_ENABLED` and `WEB_SERVER_ENABLED`, and adds a heartbeat status indicator to the main dashboard with a runtime WiFi configuration subpage at `/network`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
 `GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL in `config_secrets.h`.
 

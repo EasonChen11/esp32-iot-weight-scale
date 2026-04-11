@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include "config.h"
 
 /*
 Generate the complete HTML content for the main dashboard page.
@@ -17,3 +18,7 @@ Example:
   String html = getIndexHTML();  // Returns full webpage content
 */
 String getIndexHTML();
+
+#if WIFI_CONFIG_ENABLED
+String getNetworkPageHTML();
+#endif
