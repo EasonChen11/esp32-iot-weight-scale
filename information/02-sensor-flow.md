@@ -150,3 +150,81 @@ _doRead2():
     → scale1.begin()         (SCK=LOW → HX711 自動喚醒)
     → scale2.begin()
 ```
+
+## 倍率校正 (#30)
+
+每個 HX711 + load cell 個體有製造誤差，需要單獨校正倍率才能正確把 raw ADC 值轉成 kg。
+
+### 校正數學
+
+```
+weight_kg = (raw_reading - offset) / scale_factor
+```
+
+校正時：
+
+```
+new_scale_factor = (raw_with_known_weight - offset) / known_weight_kg
+```
+
+### NVS Fallback Chain
+
+開機時 `initSensor()` 會：
+
+```
+1. 試讀 NVS scale_data:scale1
+   ├─ 有 → 用 NVS 值
+   └─ 沒 → fallback 到 LOADCELL1_SCALE_FACTOR (compile-time)
+2. scale1.set_scale(factor)
+3. 印出 serial: "Sensor 1 scale factor: NNN.NN (NVS|default)"
+```
+
+Sensor 2 同樣處理。**升級韌體不會弄丟校正值** — NVS 跟韌體 binary 是分開的 flash 區段。
+
+### NVS Keys
+
+| Namespace | Key | Type | 用途 |
+|---|---|---|---|
+| `scale_data` | `offset` | long | Sensor 1 絕對零點 (既有) |
+| `scale_data` | `offset2` | long | Sensor 2 絕對零點 (既有) |
+| `scale_data` | `scale1` | float | Sensor 1 倍率 (新) |
+| `scale_data` | `scale2` | float | Sensor 2 倍率 (新) |
+| `scale_data` | `record_id` | long | 記錄 ID 計數器 (既有) |
+
+### 校正流程（使用者操作）
+
+1. **清空感測器** — 確保 load cell 上完全沒東西
+2. **點「設定零點」**（既有的絕對歸零）— offset 寫入 NVS
+3. **放上已知重量** — 建議 5~20 kg 標準砝碼
+4. **在「已知重量 kg」欄輸入該重量** — 例如 `5`
+5. **點「校正倍率」** — 後端讀 10 筆 raw 平均，算出新倍率
+6. **觀察主頁讀數** — 應該 ≈ 已知重量（誤差 < 1%）
+
+兩個 sensor 各自獨立校正，互不影響。
+
+### 錯誤處理摘要
+
+| 情境 | 後端回應 | 系統行為 |
+|---|---|---|
+| 重量為空 / 0 / 負數 | （前端攔截）| 紅字「請輸入有效的重量」 |
+| 重量 > 200 kg | （HTML5 max 攔截）| 瀏覽器原生提示 |
+| 沒放重物（delta < 1000 raw counts）| 400 `{"error":"未偵測到負載 — 確認重物已放上"}` | 紅字錯誤訊息；NVS 不變 |
+| 計算倍率超範圍 (1000~500000 之外) | 400 `{"error":"計算倍率超出合理範圍 — 檢查接線"}` | 紅字錯誤訊息；NVS 不變 |
+| Sensor 沒回應 | 400 `{"error":"感測器無回應"}` | 紅字錯誤訊息 |
+| 連點按鈕 | 前端 button 立即 disable | 只送出一次請求 |
+
+### Strategy
+
+**只在校正成功時才寫 NVS**。任何錯誤路徑都不污染 NVS，使用者重試或重開機可以回到上一個有效狀態。與 #28 WiFi credentials 相同模式。
+
+### 相關檔案
+
+- `include/config.h` — `LOADCELL1_SCALE_FACTOR`、`LOADCELL2_SCALE_FACTOR` (compile-time fallback)
+- `include/storage/nvs_storage.h` / `src/storage/nvs_storage.cpp` — `saveScaleFactor1/2`、`getScaleFactor1/2`、`hasScaleFactor1/2`
+- `include/sensor_manager.h` / `src/sensor_manager.cpp` — `calibrateScaleFactor1/2(knownKg, errorOut)`
+- `src/web_server_logic.cpp` — `/calibrate-scale1`、`/calibrate-scale2` endpoints
+- `src/web_pages.cpp` — UI 「感測器 N 校正」摺疊面板內的倍率校正區塊
+
+### 相關 issue
+
+#30 — Runtime scale factor calibration via web UI for each load cell
