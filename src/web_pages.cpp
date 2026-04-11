@@ -344,28 +344,72 @@ String getIndexHTML()
         function tare1() { fetch('/tare1'); }
         function tare2() { fetch('/tare2'); }
 
-        /* ── Absolute zero calibration ──────────────────────────────── */
+        /* ── 絕對歸零 ──────────────────────────────────────────────── */
         function setZero(sensor, event) {
-            const code = prompt("Confirm sensor " + sensor + " is completely unloaded, then enter 'RESET':");
+            const code = prompt("確認感測器 " + sensor + " 完全沒有負載，輸入 'RESET' 確認：");
             if (code !== "RESET") {
-                if (code !== null) alert("Incorrect code — calibration cancelled.");
+                if (code !== null) alert("輸入不正確 — 校正取消");
                 return;
             }
             const btn = event.target;
             const orig = btn.innerHTML;
-            btn.innerHTML = "Calibrating...";
+            btn.innerHTML = "校正中...";
             btn.disabled = true;
             fetch('/set-zero' + sensor)
                 .then(r => r.text())
                 .then(() => {
-                    alert("Sensor " + sensor + " calibration saved.");
+                    alert("感測器 " + sensor + " 零點已儲存");
                     btn.innerHTML = orig;
                     btn.disabled = false;
                 })
                 .catch(() => {
-                    alert("Calibration failed — check connection.");
+                    alert("校正失敗 — 檢查連線");
                     btn.innerHTML = orig;
                     btn.disabled = false;
+                });
+        }
+
+        /* ── 倍率校正 ──────────────────────────────────────────────── */
+        function calibrateScale(sensor, event) {
+            const input  = document.getElementById('calWeight' + sensor);
+            const status = document.getElementById('calStatus' + sensor);
+            const btn    = event.target;
+            const w      = parseFloat(input.value);
+
+            if (!w || w <= 0) {
+                status.className = 'cal-status error';
+                status.innerText = '請輸入有效的重量';
+                return;
+            }
+
+            if (!confirm("確定要以 " + w + " kg 為基準校正感測器 " + sensor + " 的倍率嗎？\n請確認重物已放在感測器上。")) {
+                return;
+            }
+
+            const orig = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = '校正中...';
+            status.className = 'cal-status';
+            status.innerText = '校正中...（取樣 10 筆）';
+
+            fetch('/calibrate-scale' + sensor + '?w=' + encodeURIComponent(w))
+                .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
+                .then(({ ok, body }) => {
+                    if (ok && body.factor) {
+                        status.className = 'cal-status success';
+                        status.innerText = '✓ 已套用校正值 (' + body.factor.toFixed(2) + ')';
+                    } else {
+                        status.className = 'cal-status error';
+                        status.innerText = '✗ ' + (body.error || '校正失敗');
+                    }
+                })
+                .catch(err => {
+                    status.className = 'cal-status error';
+                    status.innerText = '✗ 網路錯誤 — ' + err.message;
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerText = orig;
                 });
         }
 
