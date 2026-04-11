@@ -3,6 +3,7 @@
 #include "config.h"
 #include <Arduino.h>
 #include <driver/gpio.h>
+#include "storage/nvs_storage.h"
 
 static HX711 scale1;
 static HX711 scale2;
@@ -214,6 +215,92 @@ long captureAbsoluteOffset2()
 }
 
 long captureAbsoluteOffset() { return captureAbsoluteOffset1(); }
+
+float calibrateScaleFactor1(float knownKg, String &errorOut)
+{
+#if SIMULATE_SENSOR
+    Serial.printf("[Sensor] S1 simulated calibration with known=%.2f kg\n", knownKg);
+    return 85000.0f;
+#else
+    if (!scale1.is_ready() && !scale1.wait_ready_timeout(2000)) {
+        errorOut = "感測器無回應";
+        return -1.0f;
+    }
+    if (knownKg <= 0.0f) {
+        errorOut = "重量必須大於 0";
+        return -1.0f;
+    }
+    if (knownKg > 200.0f) {
+        errorOut = "重量超出合理範圍 (>200 kg)";
+        return -1.0f;
+    }
+
+    long rawAvg = scale1.read_average(10);
+    long offset = scale1.get_offset();
+    long delta  = rawAvg - offset;
+
+    if (abs(delta) < 1000) {
+        errorOut = "未偵測到負載 — 確認重物已放上";
+        return -1.0f;
+    }
+
+    float newFactor = (float)delta / knownKg;
+
+    if (newFactor < 1000.0f || newFactor > 500000.0f) {
+        errorOut = "計算倍率超出合理範圍 — 檢查接線";
+        return -1.0f;
+    }
+
+    scale1.set_scale(newFactor);
+    saveScaleFactor1(newFactor);
+    Serial.printf("[Sensor] S1 calibrated: factor=%.2f (raw=%ld, offset=%ld, delta=%ld, kg=%.2f)\n",
+                  newFactor, rawAvg, offset, delta, knownKg);
+    return newFactor;
+#endif
+}
+
+float calibrateScaleFactor2(float knownKg, String &errorOut)
+{
+#if SIMULATE_SENSOR
+    Serial.printf("[Sensor] S2 simulated calibration with known=%.2f kg\n", knownKg);
+    return 85000.0f;
+#else
+    if (!scale2.is_ready() && !scale2.wait_ready_timeout(2000)) {
+        errorOut = "感測器無回應";
+        return -1.0f;
+    }
+    if (knownKg <= 0.0f) {
+        errorOut = "重量必須大於 0";
+        return -1.0f;
+    }
+    if (knownKg > 200.0f) {
+        errorOut = "重量超出合理範圍 (>200 kg)";
+        return -1.0f;
+    }
+
+    long rawAvg = scale2.read_average(10);
+    long offset = scale2.get_offset();
+    long delta  = rawAvg - offset;
+
+    if (abs(delta) < 1000) {
+        errorOut = "未偵測到負載 — 確認重物已放上";
+        return -1.0f;
+    }
+
+    float newFactor = (float)delta / knownKg;
+
+    if (newFactor < 1000.0f || newFactor > 500000.0f) {
+        errorOut = "計算倍率超出合理範圍 — 檢查接線";
+        return -1.0f;
+    }
+
+    scale2.set_scale(newFactor);
+    saveScaleFactor2(newFactor);
+    Serial.printf("[Sensor] S2 calibrated: factor=%.2f (raw=%ld, offset=%ld, delta=%ld, kg=%.2f)\n",
+                  newFactor, rawAvg, offset, delta, knownKg);
+    return newFactor;
+#endif
+}
 
 void powerDownSensors()
 {

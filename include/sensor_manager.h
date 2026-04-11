@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 /*
 Initialize both weight sensors with optional absolute zero offsets.
 If an offset is 0 the corresponding sensor will auto-tare on startup.
@@ -61,6 +63,12 @@ long captureAbsoluteOffset2();
 Alias for captureAbsoluteOffset1() – kept for backward compatibility.
 */
 long captureAbsoluteOffset();
+
+// Scale factor calibration: reads 10 raw samples, computes factor from known weight,
+// applies to HX711 in-memory and persists to NVS. Returns the new factor on success,
+// or -1.0f on failure (errorOut populated with a Chinese error message for the user).
+float calibrateScaleFactor1(float knownKg, String &errorOut);
+float calibrateScaleFactor2(float knownKg, String &errorOut);
 
 /*
 Power down both HX711 modules to save ~1.5 mA each during deep sleep.
