@@ -281,7 +281,8 @@ String getIndexHTML()
             }).catch(() => {});
         }
         setInterval(updateNetStatus, 5000);
-        updateNetStatus();
+        // Delay first heartbeat to avoid colliding with initial page-load fetches
+        setTimeout(updateNetStatus, 1500);
 
         /* ── Clock ──────────────────────────────────────────────────── */
         setInterval(function() {
@@ -339,7 +340,8 @@ String getIndexHTML()
             });
         }
 
-        function fetchRecords() {
+        function fetchRecords(retry) {
+            retry = retry || 0;
             fetch('/get-records')
                 .then(r => {
                     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -347,10 +349,15 @@ String getIndexHTML()
                 })
                 .then(renderTable)
                 .catch(err => {
-                    console.error('[fetchRecords] failed:', err);
-                    const tbody = document.getElementById('recordBody');
-                    if (tbody && tbody.children.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="7" style="color:#e74c3c; padding:12px;">Failed to load records — ' + err.message + '</td></tr>';
+                    console.warn('[fetchRecords] attempt ' + (retry + 1) + ' failed:', err);
+                    if (retry < 2) {
+                        setTimeout(function() { fetchRecords(retry + 1); }, 500 * (retry + 1));
+                    } else {
+                        console.error('[fetchRecords] giving up after 3 attempts');
+                        const tbody = document.getElementById('recordBody');
+                        if (tbody && tbody.children.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="7" style="color:#e74c3c; padding:12px;">Failed to load records — ' + err.message + ' (after 3 retries)</td></tr>';
+                        }
                     }
                 });
         }
@@ -444,8 +451,6 @@ String getIndexHTML()
         /* ── Init ───────────────────────────────────────────────────── */
         window.onload = function() {
             populateSelects();
-            fetchSchedule();
-            fetchRecords();
 
             if (typeof Chart !== 'undefined') {
                 chartTotal = makeChart('chartTotal', '#27ae60');
@@ -453,16 +458,22 @@ String getIndexHTML()
                 console.error('Chart.js not loaded — upload LittleFS image');
             }
 
-            const timestamp = Math.floor(Date.now() / 1000);
-            fetch('/sync?t=' + timestamp)
-                .then(response => {
-                    if (response.ok) {
-                        setTimeout(fetchRecords, 1500);
-                    } else {
-                        console.warn('[/sync] HTTP ' + response.status);
-                    }
-                })
-                .catch(err => console.error('[/sync] failed:', err));
+            // Stagger initial fetches to avoid TCP backlog congestion on ESP32
+            // (single-threaded WebServer + lwIP backlog ~5 connections)
+            setTimeout(fetchRecords,  100);
+            setTimeout(fetchSchedule, 300);
+            setTimeout(function() {
+                const timestamp = Math.floor(Date.now() / 1000);
+                fetch('/sync?t=' + timestamp)
+                    .then(response => {
+                        if (response.ok) {
+                            setTimeout(fetchRecords, 1500);
+                        } else {
+                            console.warn('[/sync] HTTP ' + response.status);
+                        }
+                    })
+                    .catch(err => console.error('[/sync] failed:', err));
+            }, 600);
 
             setInterval(fetchRecords, 60000);
         };
