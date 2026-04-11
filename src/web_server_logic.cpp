@@ -126,6 +126,42 @@ void initWebRoutes(WebServer &server)
 
     server.on("/wifi-status", [&server]()
               { server.send(200, "application/json", getWifiStatusJson()); });
+
+    server.on("/network/scan", [&server]()
+              {
+                  String json = scanNetworksJson();
+                  if (json.startsWith("{\"error\":\"busy\"")) {
+                      server.send(409, "application/json", json);
+                  } else if (json.startsWith("{\"error\":")) {
+                      server.send(500, "application/json", json);
+                  } else {
+                      server.send(200, "application/json", json);
+                  } });
+
+    server.on("/network/save", HTTP_POST, [&server]()
+              {
+                  String ssid = server.arg("s");
+                  String pass = server.arg("p");
+                  String err;
+                  if (!requestStaChange(ssid, pass, err)) {
+                      if (err == "busy") {
+                          String body = "{\"error\":\"busy\",\"current_ssid\":\""
+                                        + getCurrentSsid() + "\"}";
+                          server.send(409, "application/json", body);
+                      } else {
+                          server.send(400, "application/json",
+                                      "{\"error\":\"" + err + "\"}");
+                      }
+                      return;
+                  }
+                  server.send(202, "application/json",
+                              "{\"status\":\"connecting\"}"); });
+
+    server.on("/network/clear", HTTP_POST, [&server]()
+              {
+                  clearStaCredentials();
+                  server.send(200, "application/json",
+                              "{\"status\":\"cleared\"}"); });
 #endif
 
     // ── Record management ─────────────────────────────────────────────
