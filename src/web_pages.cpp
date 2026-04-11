@@ -90,7 +90,7 @@ String getIndexHTML()
         .btn-clear-all:hover { background-color: #f8f9fa; color: #e74c3c; border-color: #e74c3c; }
 
         .table-container { margin-top: 16px; border-top: 2px solid #eee; padding-top: 16px; }
-        .table-scroll { max-height: 320px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
+        .table-scroll { max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th, td { padding: 10px 6px; border-bottom: 1px solid #eee; text-align: center; }
         th { background-color: #f8f9fa; color: #666; position: sticky; top: 0; z-index: 1; }
@@ -177,7 +177,7 @@ String getIndexHTML()
             </div>
 
             <div class="table-container">
-                <h3 style="color:#555; font-size:15px;">Data Records (Max 200)</h3>
+                <h3 id="recordsTitle" style="color:#555; font-size:15px;">Recent Records</h3>
                 <div class="table-scroll">
                     <table>
                         <thead>
@@ -220,6 +220,7 @@ String getIndexHTML()
     <script src="/chartjs"></script>
     <script>
         const MAX_PTS = 30;
+        const MAX_VISIBLE_RECORDS = 20;
         let chartTotal;
 
         /* ── Chart factory ──────────────────────────────────────────── */
@@ -321,22 +322,36 @@ String getIndexHTML()
         /* ── Records ────────────────────────────────────────────────── */
         function renderTable(data) {
             const records = typeof data === 'string' ? JSON.parse(data) : data;
+            const total = records.length;
+            const visible = records.slice(0, MAX_VISIBLE_RECORDS);
             const tbody = document.getElementById('recordBody');
             tbody.innerHTML = '';
-            records.forEach((item, i) => {
+            visible.forEach((item, i) => {
                 const s1 = parseFloat(item.sensor1) || 0;
                 const s2 = parseFloat(item.sensor2) || 0;
-                const total = (s1 + s2).toFixed(3);
+                const sumStr = (s1 + s2).toFixed(3);
                 tbody.innerHTML += `<tr>
                     <td>${i + 1}</td>
                     <td>${item.date || '-'}</td>
                     <td>${item.time}</td>
                     <td>${s1.toFixed(3)}</td>
                     <td>${s2.toFixed(3)}</td>
-                    <td>${total}</td>
+                    <td>${sumStr}</td>
                     <td><button class="btn-del" onclick="deleteRecord(${i})">&#x2715;</button></td>
                 </tr>`;
             });
+
+            // Update header to show how many records are shown vs how many exist
+            const titleEl = document.getElementById('recordsTitle');
+            if (titleEl) {
+                if (total === 0) {
+                    titleEl.innerText = 'Recent Records (none)';
+                } else if (total <= visible.length) {
+                    titleEl.innerText = `Recent Records (${total})`;
+                } else {
+                    titleEl.innerText = `Recent Records (latest ${visible.length} of ${total})`;
+                }
+            }
         }
 
         function fetchRecords(retry) {
