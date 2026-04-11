@@ -96,4 +96,48 @@ void handleDeepSleep()
     esp_deep_sleep_start();
 }
 
+/*
+Poll the wake button while the device is awake. On a debounced falling edge,
+reset the awake countdown by setting bootTimeMs back to "now".
+
+Behaviour rules:
+  - Startup grace period: ignore the button for the first WAKE_BTN_STARTUP_GRACE_MS
+    after boot. If the button happens to be held LOW at startup we won't trigger.
+  - Debounce: ignore presses within WAKE_BTN_DEBOUNCE_MS of the previous one.
+  - Falling-edge only: holding the button LOW does NOT retrigger; only the
+    HIGH→LOW transition counts.
+
+The button still functions as the deep-sleep wake-up source via ext0; this
+function only handles the case where the device is already awake.
+*/
+void handleWakeButton()
+{
+    static int lastBtnState = HIGH;
+    static unsigned long lastDebounceMs = 0;
+
+    int btn = digitalRead(WAKE_BTN_PIN);
+    unsigned long now = millis();
+
+    // Startup grace period — keep state in sync but never trigger
+    if (now - bootTimeMs < WAKE_BTN_STARTUP_GRACE_MS) {
+        lastBtnState = btn;
+        return;
+    }
+
+    // Debounce window
+    if (now - lastDebounceMs < WAKE_BTN_DEBOUNCE_MS) {
+        return;
+    }
+
+    // Falling edge detection: HIGH → LOW = press
+    if (lastBtnState == HIGH && btn == LOW) {
+        bootTimeMs = now;
+        lastDebounceMs = now;
+        Serial.printf("[Button] Press detected — awake timer reset (next sleep in %lu ms)\n",
+                      AWAKE_DURATION_MS);
+    }
+
+    lastBtnState = btn;
+}
+
 #endif // DEEP_SLEEP_ENABLED

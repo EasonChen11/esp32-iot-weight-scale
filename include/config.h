@@ -56,6 +56,8 @@ const int MAX_SCHEDULE_ENTRIES = 10;
 const int WAKE_BTN_PIN = 32;                    // Wake-up button signal (INPUT_PULLUP, active LOW — supports ext0)
 const int WAKE_BTN_GND = 33;                    // GPIO used as button GND (OUTPUT LOW — button draws only µA)
 const unsigned long AWAKE_DURATION_MS = 600000; // Stay awake 10 min after boot before sleeping
+const unsigned long WAKE_BTN_DEBOUNCE_MS = 200; // Software debounce window for awake-time button press
+const unsigned long WAKE_BTN_STARTUP_GRACE_MS = 2000; // Ignore button presses for the first N ms after boot
 
 // HX711 pins  (DT / SCK — no ACC pin)
 const int LOADCELL1_DOUT_PIN = 13;

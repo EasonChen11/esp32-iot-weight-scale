@@ -79,6 +79,7 @@ void WebAndTasksCode(void *pvParameters)
 #endif
 
 #if DEEP_SLEEP_ENABLED
+    handleWakeButton();
     handleDeepSleep();
 #endif
 
