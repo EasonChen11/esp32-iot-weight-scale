@@ -11,7 +11,7 @@
 #endif
 #include <time.h>
 #include <LittleFS.h>
-#if NTP_ENABLED
+#if NTP_ENABLED || WIFI_CONFIG_ENABLED
 #include "wifi_manager.h"
 #endif
 #if GOOGLE_SHEETS_ENABLED
@@ -120,6 +120,13 @@ void initWebRoutes(WebServer &server)
                   char buf[20];
                   strftime(buf, sizeof(buf), "%H:%M:%S", &timeinfo);
                   server.send(200, "text/plain", String(buf)); });
+
+#if WIFI_CONFIG_ENABLED
+    // ── Dynamic WiFi configuration ────────────────────────────────────
+
+    server.on("/wifi-status", [&server]()
+              { server.send(200, "application/json", getWifiStatusJson()); });
+#endif
 
     // ── Record management ─────────────────────────────────────────────
 
