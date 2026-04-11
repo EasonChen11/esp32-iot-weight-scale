@@ -340,7 +340,19 @@ String getIndexHTML()
         }
 
         function fetchRecords() {
-            fetch('/get-records').then(r => r.json()).then(renderTable);
+            fetch('/get-records')
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(renderTable)
+                .catch(err => {
+                    console.error('[fetchRecords] failed:', err);
+                    const tbody = document.getElementById('recordBody');
+                    if (tbody && tbody.children.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="color:#e74c3c; padding:12px;">Failed to load records — ' + err.message + '</td></tr>';
+                    }
+                });
         }
 
         function addRecord() {
@@ -351,11 +363,16 @@ String getIndexHTML()
             const s2Val = document.getElementById('weight2').innerText;
             fetch('/add-record?t=' + encodeURIComponent(timeStr)
                 + '&d=' + dateStr + '&s1=' + s1Val + '&s2=' + s2Val)
-                .then(r => r.json()).then(renderTable);
+                .then(r => r.json())
+                .then(renderTable)
+                .catch(err => console.error('[addRecord] failed:', err));
         }
 
         function deleteRecord(index) {
-            fetch('/del-record?i=' + index).then(r => r.json()).then(renderTable);
+            fetch('/del-record?i=' + index)
+                .then(r => r.json())
+                .then(renderTable)
+                .catch(err => console.error('[deleteRecord] failed:', err));
         }
 
         function clearAll() {
@@ -399,7 +416,13 @@ String getIndexHTML()
         }
 
         function fetchSchedule() {
-            fetch('/get-schedule').then(r => r.json()).then(renderSchedule);
+            fetch('/get-schedule')
+                .then(r => {
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    return r.json();
+                })
+                .then(renderSchedule)
+                .catch(err => console.error('[fetchSchedule] failed:', err));
         }
 
         function addSchedule() {
@@ -412,7 +435,10 @@ String getIndexHTML()
         }
 
         function delSchedule(i) {
-            fetch('/del-schedule?i=' + i).then(r => r.json()).then(renderSchedule);
+            fetch('/del-schedule?i=' + i)
+                .then(r => r.json())
+                .then(renderSchedule)
+                .catch(err => console.error('[delSchedule] failed:', err));
         }
 
         /* ── Init ───────────────────────────────────────────────────── */
@@ -428,11 +454,15 @@ String getIndexHTML()
             }
 
             const timestamp = Math.floor(Date.now() / 1000);
-            fetch('/sync?t=' + timestamp).then(response => {
-                if (response.ok) {
-                    setTimeout(fetchRecords, 1500);
-                }
-            });
+            fetch('/sync?t=' + timestamp)
+                .then(response => {
+                    if (response.ok) {
+                        setTimeout(fetchRecords, 1500);
+                    } else {
+                        console.warn('[/sync] HTTP ' + response.status);
+                    }
+                })
+                .catch(err => console.error('[/sync] failed:', err));
 
             setInterval(fetchRecords, 60000);
         };
