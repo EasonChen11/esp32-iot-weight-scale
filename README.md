@@ -15,6 +15,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 ## Key Features
 
 - **Dual HX711 Sensors** — two independent load cells with per-sensor calibration
+- **Runtime Sensor Calibration** — adjust scale factor and absolute zero per-sensor from the web UI; persisted to NVS, no re-flash required. See `information/02-sensor-flow.md`
 - **Web Dashboard** — built-in HTTP UI with live charts (Chart.js from LittleFS)
 - **OLED Display** — SSD1306 auto-cycles Total / Sensor 1 / Sensor 2
 - **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS (hourly disabled in deep sleep mode)
