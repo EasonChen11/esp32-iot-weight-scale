@@ -25,68 +25,95 @@ AP (Soft-AP): phone/device direct connect, always on, IP 192.168.4.1
 STA (Station): home WiFi for MQTT + NTP, DHCP IP, fallback if unavailable
 ```
 
-## 初始化流程
+## 開機 Fallback Chain (#28)
+
+開機時 `initWiFi()` 依序嘗試以下兩組設定，每組 8 秒 timeout：
 
 ```
-initWiFi()
-    │
-    ▼
-WiFi.mode(WIFI_AP_STA)       ← 設定雙模式
-    │
-    ▼
-WiFi.softAP(SSID, PASS)      ← 立即啟動 AP
-Serial: "[WiFi] AP started: SSID='ESP32_Weight_Scale' IP: 192.168.4.1"
-    │
-    ▼
-WiFi.begin(STA_SSID, STA_PASS)  ← 開始連接家用 WiFi
-    │
-    ▼
-等待連線（每 500ms 檢查一次，最多 30 次 = 15 秒）
-    │
-    ├─ 成功 → Serial 印出 STA IP + MQTT broker 資訊
-    │
-    └─ 失敗 → Serial 警告，MQTT 不可用，Web 仍可透過 AP 使用
-    │
-    ▼
-initNTP()                      ← NTP 時間同步（見 10-ntp-flow.md）
-    │
-    ├─ STA 連線成功 → configTime() → 自動從 NTP 伺服器取得時間
-    │
-    └─ STA 連線失敗 → 跳過 NTP，依靠瀏覽器 /sync 同步
+setup()
+  ├─ WiFi.softAP(...)  ← AP 立即開啟，永遠不關
+  ├─ if NVS 有 SSID:
+  │     try connect (8s)
+  │     ✓ → 完成
+  ├─ try compile-time SSID (8s)
+  │     ✓ → 完成
+  └─ ✗ → DISCONNECTED (AP 仍在)
 ```
 
-## 連線狀態對功能的影響
+最壞情況約 16 秒；之後 web server 才啟動（同步阻塞，避免初始化階段的 race condition）。
 
-| 功能 | STA 連線成功 | STA 連線失敗 |
-|------|-------------|-------------|
-| Web 伺服器 (AP) | 可用 (192.168.4.1) | 可用 (192.168.4.1) |
-| Web 伺服器 (STA) | 可用 (DHCP IP) | 不可用 |
-| MQTT 發布 | 可用 | 不可用 |
-| NTP 時間同步 | 自動同步 | 不可用 |
-| OLED 顯示 | 正常 | 正常 |
-| 感測器讀取 | 正常 | 正常 |
-| 自動記錄 | 正常 | 正常 |
-| 時間同步 | NTP 自動 + Web `/sync` 備用 | 僅 Web `/sync`（AP 模式） |
-| 排程喚醒 | 正常（NTP 提供時間） | 需先開網頁 /sync 同步時間 |
-
-## 使用情境
+## Runtime 狀態機 (#28)
 
 ```
-情境 A：有家用路由器（STA + AP）
-  手機/電腦 ──WiFi──→ 路由器 ←──WiFi──→ ESP32 (STA)
-                        │                   │
-                        ▼                   ▼
-                   MQTT broker (PC)    NTP 伺服器（自動同步）
-
-情境 B：戶外/沒有路由器（僅 AP）
-  手機 ──WiFi──→ ESP32 AP (192.168.4.1)
-                     │
-                     ▼
-                  Web 介面正常使用
-                  時間透過 /sync 從手機瀏覽器同步
-                  （MQTT、NTP 不可用）
-
-情境 C：深度睡眠模式 + 有路由器
-  ESP32 喚醒 → WiFi STA 連線 → NTP 同步 → 記錄資料 → 10分鐘後入睡
-  （全自動，無需人工介入）
+DISCONNECTED ──/network/save──→ CONNECTING ──成功──→ CONNECTED
+                                    │                    │
+                                    │                    │ router 斷電
+                                    │                    ▼
+                                    │              DISCONNECTED
+                                    │ 8s timeout
+                                    ▼
+                                  FAILED
 ```
+
+唯一寫入點：`processWifiTasks()`，跑在 Core 0 的 `WebAndTasks` 迴圈，每次 loop 迭代呼叫一次。
+
+## NVS 寫入時機 (Strategy 2)
+
+「**只在連線成功後**」才把新的 SSID/密碼寫入 NVS namespace `wifi_cfg`。失敗時 NVS 完全不變，所以使用者放棄離開後，下次重開機仍然會嘗試上次成功的設定（自我修復）。
+
+## /network 子頁面流程
+
+1. 使用者進入 `/network` → 立刻 fetch `/wifi-status` 顯示目前狀態
+2. 自動 fetch `/network/scan` → 顯示周圍 SSID 清單（含 RSSI、加密狀態）
+3. 使用者點選 SSID → 輸入密碼 → 按 Connect
+4. 後端 `requestStaChange()` → 立刻回 `202 connecting` → 前端進入 1Hz polling
+5. polling 看到 `connected` → 顯示綠色成功訊息；看到 `failed` 或 10 秒超時 → 顯示紅色錯誤訊息
+
+額外功能：「Clear Stored Network」按鈕清空 NVS，但不影響當下連線；下次 reboot 才走 compile-time fallback。
+
+## Spam-click 防護 (4 層)
+
+| 層 | 機制 |
+|---|---|
+| 1 | 前端：`btn.disabled = true` 同步生效，同 tab 物理上無法重複觸發 |
+| 2 | 後端：`g_wifiOpBusy` 旗標，並發 `/network/save` 或 `/network/scan` 回 409 |
+| 3 | Reload 期間：`window.onload` 先 fetch `/wifi-status`，看到 `connecting` 就預先 disable button + 接手 polling |
+| 4 | 409 → 前端轉成 resume polling，不顯示錯誤，使用者不會看到「卡住」狀態 |
+
+## Heartbeat 狀態指示
+
+主頁右上角小圓點，每 5 秒 polling `/wifi-status`：
+
+| 顏色 | 動畫 | 意義 |
+|---|---|---|
+| 綠色 | 1.5s 慢閃 (heartbeat) | CONNECTED |
+| 黃色 | 0.5s 快閃 | CONNECTING |
+| 灰色 | 靜止 | DISCONNECTED |
+| 紅色 | 靜止 | FAILED |
+
+## 錯誤處理摘要
+
+| 情境 | 系統行為 |
+|---|---|
+| NVS 為空 | 跳過 NVS 嘗試，直接試 compile-time |
+| NVS SSID 連不上 (8s timeout) | 自動 fallback 到 compile-time |
+| 兩個都連不上 | 進入 AP-only 狀態，網頁仍可用，使用者可進 /network 重新設定 |
+| 使用者打錯密碼 | 顯示 inline 紅色錯誤；NVS 不變；password 欄清空可立即重試 |
+| 連線中重複按 Connect | 前端 button 立即 disable；後端 409 |
+| 兩個 tab 同時送出 | 第一個 tab 收 202；第二個 tab 收 409 + `current_ssid` 並接手 polling |
+| router 中途斷電 | heartbeat 變灰；ESP32 自動重連，恢復後 heartbeat 變回綠 |
+| 切 SSID 後 NTP | 自動觸發 non-blocking re-sync (`triggerNtpResync` via `g_pendingNtpSync` flag) |
+| Clear Stored Network | 清 NVS；當下連線完全不變；下次 reboot 走 compile-time fallback |
+
+## 相關檔案
+
+- `include/config.h` — `WIFI_CONFIG_ENABLED`、`WIFI_CONNECT_TIMEOUT_MS`
+- `include/wifi_manager.h` / `src/wifi_manager.cpp` — 狀態機、NVS chain、scan/status 助手
+- `include/storage/nvs_storage.h` / `src/storage/nvs_storage.cpp` — `wifi_cfg` namespace 的 4 個函式
+- `src/web_server_logic.cpp` — `/network`, `/wifi-status`, `/network/scan`, `/network/save`, `/network/clear`
+- `src/web_pages.cpp` — `getNetworkPageHTML()` + 主頁 heartbeat indicator
+- `src/main.cpp` — `WebAndTasks` 迴圈呼叫 `processWifiTasks()`
+
+## 相關 issue
+
+#28 — Add runtime WiFi configuration via web UI
