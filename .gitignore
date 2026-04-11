@@ -3,6 +3,7 @@
 .vscode
 nodered_data
 .worktrees/
+docs/
 
 # Secrets (WiFi / MQTT credentials)
 include/config_secrets.h
