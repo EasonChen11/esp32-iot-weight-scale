@@ -133,13 +133,24 @@ String getIndexHTML()
             <div id="weight1" class="weight-display s1-color">0.00</div>
             <div class="unit">kg</div>
             <div class="btn-group">
-                <button class="btn-tare-s1" onclick="tare1()">Tare S1</button>
+                <button class="btn-tare-s1" onclick="tare1()">歸零 S1</button>
             </div>
             <details class="calibration-panel">
-                <summary>Absolute Zero Calibration (S1)</summary>
+                <summary>感測器 1 校正</summary>
                 <div class="calibration-content">
-                    <p class="calibration-note">Perform only when Sensor 1 is completely unloaded.</p>
-                    <button class="btn-cal" onclick="setZero(1, event)">Calibrate Sensor 1 Zero</button>
+
+                    <h4 class="cal-section-title">絕對歸零</h4>
+                    <p class="calibration-note">感測器無負載時才能執行</p>
+                    <button class="btn-cal" onclick="setZero(1, event)">設定零點</button>
+
+                    <h4 class="cal-section-title">倍率校正</h4>
+                    <p class="calibration-note">💡 請先在無負載時按「設定零點」，再放上已知重量</p>
+                    <div class="cal-row">
+                        <input type="number" id="calWeight1" class="cal-weight-input"
+                               step="0.001" min="0.001" max="200" placeholder="已知重量 kg">
+                        <button class="btn-cal" onclick="calibrateScale(1, event)">校正倍率</button>
+                    </div>
+                    <p class="cal-status" id="calStatus1">--</p>
                 </div>
             </details>
         </div>
@@ -151,13 +162,24 @@ String getIndexHTML()
             <div id="weight2" class="weight-display s2-color">0.00</div>
             <div class="unit">kg</div>
             <div class="btn-group">
-                <button class="btn-tare-s2" onclick="tare2()">Tare S2</button>
+                <button class="btn-tare-s2" onclick="tare2()">歸零 S2</button>
             </div>
             <details class="calibration-panel">
-                <summary>Absolute Zero Calibration (S2)</summary>
+                <summary>感測器 2 校正</summary>
                 <div class="calibration-content">
-                    <p class="calibration-note">Perform only when Sensor 2 is completely unloaded.</p>
-                    <button class="btn-cal" onclick="setZero(2, event)">Calibrate Sensor 2 Zero</button>
+
+                    <h4 class="cal-section-title">絕對歸零</h4>
+                    <p class="calibration-note">感測器無負載時才能執行</p>
+                    <button class="btn-cal" onclick="setZero(2, event)">設定零點</button>
+
+                    <h4 class="cal-section-title">倍率校正</h4>
+                    <p class="calibration-note">💡 請先在無負載時按「設定零點」，再放上已知重量</p>
+                    <div class="cal-row">
+                        <input type="number" id="calWeight2" class="cal-weight-input"
+                               step="0.001" min="0.001" max="200" placeholder="已知重量 kg">
+                        <button class="btn-cal" onclick="calibrateScale(2, event)">校正倍率</button>
+                    </div>
+                    <p class="cal-status" id="calStatus2">--</p>
                 </div>
             </details>
         </div>
