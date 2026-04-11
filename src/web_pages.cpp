@@ -252,14 +252,11 @@ String getIndexHTML()
             chart.update();
         }
 
-        /* ── Data polling (500 ms) ──────────────────────────────────── */
+        /* ── Combined polling (1 s): sensors + wifi status in one request ── */
         setInterval(function() {
-            Promise.all([
-                fetch('/data1').then(r => r.text()),
-                fetch('/data2').then(r => r.text())
-            ]).then(([d1, d2]) => {
-                const v1    = parseFloat(d1) || 0;
-                const v2    = parseFloat(d2) || 0;
+            fetch('/tick').then(r => r.json()).then(data => {
+                const v1    = parseFloat(data.s1) || 0;
+                const v2    = parseFloat(data.s2) || 0;
                 const total = parseFloat((v1 + v2).toFixed(2));
 
                 document.getElementById('weight1').innerText     = v1.toFixed(2);
@@ -267,22 +264,21 @@ String getIndexHTML()
                 document.getElementById('weightTotal').innerText = total.toFixed(2);
 
                 if (chartTotal) pushChart(chartTotal, total);
-            }).catch(() => {});
-        }, 500);
 
-        /* ── WiFi heartbeat (5 s polling) ───────────────────────────── */
-        function updateNetStatus() {
-            fetch('/wifi-status').then(r => r.json()).then(s => {
-                const dot = document.getElementById('netDot');
-                dot.className = 'dot dot-' + s.status;
-                document.getElementById('netSsid').innerText =
-                    s.current_ssid || (s.target_ssid ? '(connecting to ' + s.target_ssid + ')' : 'Not connected');
-                document.getElementById('netIp').innerText = s.ip ? '\u00b7 ' + s.ip : '';
+                // Update heartbeat indicator from the same response (when WIFI_CONFIG_ENABLED)
+                if (data.wifi) {
+                    const dot = document.getElementById('netDot');
+                    if (dot) {
+                        dot.className = 'dot dot-' + data.wifi.status;
+                        document.getElementById('netSsid').innerText =
+                            data.wifi.current_ssid ||
+                            (data.wifi.target_ssid ? '(connecting to ' + data.wifi.target_ssid + ')' : 'Not connected');
+                        document.getElementById('netIp').innerText =
+                            data.wifi.ip ? '\u00b7 ' + data.wifi.ip : '';
+                    }
+                }
             }).catch(() => {});
-        }
-        setInterval(updateNetStatus, 5000);
-        // Delay first heartbeat to avoid colliding with initial page-load fetches
-        setTimeout(updateNetStatus, 1500);
+        }, 1000);
 
         /* ── Clock ──────────────────────────────────────────────────── */
         setInterval(function() {

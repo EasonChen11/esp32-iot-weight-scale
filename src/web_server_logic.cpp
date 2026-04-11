@@ -76,6 +76,19 @@ void initWebRoutes(WebServer &server)
                   server.sendHeader("Cache-Control", "no-store");
                   server.send(200, "text/plain", String(getCachedWeight2(), 2)); });
 
+    // Combined polling endpoint: sensors + wifi status in one response.
+    // Halves the polling request rate compared to /data1 + /data2 + /wifi-status.
+    server.on("/tick", [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  String json = "{\"s1\":" + String(getCachedWeight1(), 2)
+                              + ",\"s2\":" + String(getCachedWeight2(), 2);
+#if WIFI_CONFIG_ENABLED
+                  json += ",\"wifi\":" + getWifiStatusJson();
+#endif
+                  json += "}";
+                  server.send(200, "application/json", json); });
+
     // ── Tare endpoints ────────────────────────────────────────────────
 
     server.on("/tare1", [&server]()
