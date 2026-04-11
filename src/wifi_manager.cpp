@@ -193,6 +193,68 @@ void processWifiTasks()
     }
 }
 
+/*
+Build the JSON response for /wifi-status. Includes target_ssid only when
+CONNECTING and current_ssid/ip/rssi only when CONNECTED.
+*/
+String getWifiStatusJson()
+{
+    String json = "{\"status\":\"";
+    switch (g_wifiStatus) {
+        case WIFI_STATUS_CONNECTED:    json += "connected";    break;
+        case WIFI_STATUS_CONNECTING:   json += "connecting";   break;
+        case WIFI_STATUS_FAILED:       json += "failed";       break;
+        case WIFI_STATUS_DISCONNECTED:
+        default:                       json += "disconnected"; break;
+    }
+    json += "\"";
+
+    if (g_wifiStatus == WIFI_STATUS_CONNECTED) {
+        json += ",\"current_ssid\":\"" + g_currentSsid + "\"";
+        json += ",\"ip\":\"" + WiFi.localIP().toString() + "\"";
+        json += ",\"rssi\":" + String(WiFi.RSSI());
+    } else if (g_wifiStatus == WIFI_STATUS_CONNECTING) {
+        json += ",\"target_ssid\":\"" + g_pendingSsid + "\"";
+    }
+
+    json += "}";
+    return json;
+}
+
+/*
+Synchronous WiFi scan, including hidden SSIDs. Returns a JSON array of
+{ssid, rssi, enc} objects, or {error:...} on failure / busy.
+Sets g_wifiOpBusy for the duration so concurrent /network/save returns 409.
+*/
+String scanNetworksJson()
+{
+    if (g_wifiOpBusy) {
+        return "{\"error\":\"busy\"}";
+    }
+    g_wifiOpBusy = true;
+    int n = WiFi.scanNetworks(false, true);  // blocking, include hidden
+    g_wifiOpBusy = false;
+
+    if (n < 0) {
+        return "{\"error\":\"scan_failed\"}";
+    }
+
+    String json = "[";
+    for (int i = 0; i < n; i++) {
+        if (i > 0) json += ",";
+        String ssid = WiFi.SSID(i);
+        // Escape backslashes and double quotes for JSON safety
+        ssid.replace("\\", "\\\\");
+        ssid.replace("\"", "\\\"");
+        const char *enc = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "OPEN" : "WPA2";
+        json += "{\"ssid\":\"" + ssid + "\",\"rssi\":" + String(WiFi.RSSI(i))
+              + ",\"enc\":\"" + enc + "\"}";
+    }
+    json += "]";
+    WiFi.scanDelete();
+    return json;
+}
+
 #endif // WIFI_CONFIG_ENABLED
 
 #if NTP_ENABLED
