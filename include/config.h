@@ -11,6 +11,7 @@
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED true
 #define GOOGLE_SHEETS_ENABLED true
+#define WIFI_CONFIG_ENABLED true
 #define SIMULATE_SENSOR true
 
 // WiFi & MQTT credentials — kept in a .gitignored file
@@ -40,6 +41,9 @@ const char *const NTP_SERVER2 = "time.google.com";
 const char *const NTP_SERVER3 = "pool.ntp.org";
 const long NTP_GMT_OFFSET_SEC = 28800; // UTC+8 (Taiwan)
 const int NTP_DAYLIGHT_OFFSET_SEC = 0;
+
+// Dynamic WiFi configuration (requires WIFI_ENABLED)
+const unsigned long WIFI_CONNECT_TIMEOUT_MS = 8000;
 
 // Wake-up schedule (daily alarm times stored in NVS)
 #define SCHEDULE_ENABLED true
