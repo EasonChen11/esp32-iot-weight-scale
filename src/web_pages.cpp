@@ -530,6 +530,14 @@ let pollTimer = null;
 
 function $(id) { return document.getElementById(id); }
 
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 function show(elemId, cls, text) {
   const el = $(elemId);
   el.className = cls;
@@ -544,7 +552,7 @@ function refreshStatus() {
     $('curIp').innerText    = s.ip   || '--';
     $('curRssi').innerText  = (s.rssi !== undefined) ? (s.rssi + ' dBm') : '--';
     return s;
-  });
+  }).catch(() => ({ status: 'disconnected' }));
 }
 
 function rssiBars(rssi) {
@@ -567,10 +575,10 @@ function renderScan(list) {
   list.forEach((ap, i) => {
     const lock = (ap.enc === 'OPEN') ? '' : '&#128274;';
     html += '<div class="ap" data-i="' + i + '" onclick="selectAp(' + i + ')">'
-         +    '<div><span class="ssid">' + ap.ssid + '</span> '
+         +    '<div><span class="ssid">' + esc(ap.ssid) + '</span> '
          +      '<span class="meta">' + lock + '</span></div>'
          +    '<div><span class="bars">' + rssiBars(ap.rssi) + '</span> '
-         +      '<span class="meta">' + ap.rssi + ' dBm</span></div>'
+         +      '<span class="meta">' + esc(String(ap.rssi)) + ' dBm</span></div>'
          +  '</div>';
   });
   html += '<div class="ap" onclick="selectOther()" style="color:#3498db;">'
@@ -612,12 +620,15 @@ function togglePw() {
 }
 
 function doScan() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  $('connectBtn').disabled = false;
+  $('connectBtn').innerText = 'Connect';
   $('scanList').innerHTML = '<p style="color:#95a5a6; text-align:center;">Scanning...</p>';
   fetch('/network/scan').then(r => {
     if (r.status === 409) { show('msg', 'err', 'WiFi busy, try again shortly'); return null; }
     if (!r.ok) { show('msg', 'err', 'Scan failed (' + r.status + ')'); return null; }
     return r.json();
-  }).then(list => { if (list) renderScan(list); });
+  }).then(list => { if (list) renderScan(list); }).catch(() => {});
 }
 
 function startPolling() {
@@ -678,6 +689,10 @@ function doConnect() {
       $('connectBtn').disabled = false;
       $('connectBtn').innerText = 'Connect';
     }
+  }).catch(() => {
+    show('msg', 'err', 'Network error — check connection');
+    $('connectBtn').disabled = false;
+    $('connectBtn').innerText = 'Connect';
   });
 }
 
