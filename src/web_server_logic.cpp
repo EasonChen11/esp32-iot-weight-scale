@@ -124,6 +124,9 @@ void initWebRoutes(WebServer &server)
 #if WIFI_CONFIG_ENABLED
     // ── Dynamic WiFi configuration ────────────────────────────────────
 
+    server.on("/network", [&server]()
+              { server.send(200, "text/html", getNetworkPageHTML()); });
+
     server.on("/wifi-status", [&server]()
               { server.send(200, "application/json", getWifiStatusJson()); });
 

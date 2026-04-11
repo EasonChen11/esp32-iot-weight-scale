@@ -403,3 +403,306 @@ String getIndexHTML()
 )rawliteral";
     return html;
 }
+
+#if WIFI_CONFIG_ENABLED
+/*
+WiFi network configuration subpage. Reachable from the main dashboard's
+"⚙ Network" link. Lets the user scan, select, enter a password, and connect
+to a new SSID at runtime. Status is fetched from /wifi-status (JSON) and
+the result of a connect attempt is observed by polling /wifi-status at 1 Hz.
+*/
+String getNetworkPageHTML()
+{
+    String html = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <meta charset='UTF-8'>
+  <title>WiFi Network Settings</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f4f4f4;
+           padding: 16px; margin: 0; max-width: 600px; margin: 0 auto; }
+    a.back { display: inline-block; margin-bottom: 16px;
+             color: #3498db; text-decoration: none; font-size: 14px; }
+    h1 { color: #333; font-size: 22px; margin: 0 0 16px; }
+    .card { background: white; padding: 18px; border-radius: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .card h2 { margin: 0 0 12px; font-size: 15px; color: #555;
+               display: flex; justify-content: space-between; align-items: center; }
+    .row { display: flex; justify-content: space-between;
+           padding: 6px 0; font-size: 14px; }
+    .row .k { color: #7f8c8d; }
+    .dot { width: 10px; height: 10px; border-radius: 50%;
+           display: inline-block; margin-right: 6px; vertical-align: middle; }
+    .dot-connected    { background: #27ae60; }
+    .dot-connecting   { background: #f39c12; }
+    .dot-disconnected { background: #95a5a6; }
+    .dot-failed       { background: #e74c3c; }
+
+    #scanList { max-height: 280px; overflow-y: auto; }
+    .ap { display: flex; justify-content: space-between; align-items: center;
+          padding: 10px 8px; border-bottom: 1px solid #eee;
+          cursor: pointer; font-size: 14px; }
+    .ap:hover { background: #f8f9fa; }
+    .ap.selected { background: #e8f4fc; }
+    .ap .ssid { font-weight: bold; color: #333; }
+    .ap .meta { color: #95a5a6; font-size: 12px; }
+    .bars { display: inline-block; width: 32px; text-align: right;
+            color: #3498db; font-family: monospace; }
+
+    .field { margin: 10px 0; }
+    .field label { display: block; font-size: 13px; color: #7f8c8d;
+                   margin-bottom: 4px; }
+    .field input { width: 100%; padding: 10px; font-size: 15px;
+                   border: 1px solid #ccc; border-radius: 6px; outline: none; }
+    .pwrow { display: flex; gap: 6px; }
+    .pwrow input { flex: 1; }
+    .pwrow button.eye { background: #ecf0f1; color: #555; border: none;
+                        padding: 0 12px; border-radius: 6px; cursor: pointer; }
+
+    button.primary { width: 100%; background: #27ae60; color: white;
+                     border: none; padding: 12px; font-size: 15px;
+                     border-radius: 8px; cursor: pointer;
+                     box-shadow: 0 4px rgba(0,0,0,0.1); }
+    button.primary:disabled { background: #bdc3c7; cursor: not-allowed; }
+    button.danger { width: 100%; background: white; color: #e74c3c;
+                    border: 1px solid #e74c3c; padding: 10px;
+                    font-size: 13px; border-radius: 6px; cursor: pointer; }
+    button.scan { background: none; border: 1px solid #3498db; color: #3498db;
+                  padding: 4px 10px; border-radius: 4px; cursor: pointer;
+                  font-size: 12px; }
+
+    #msg { padding: 10px; border-radius: 6px; font-size: 14px;
+           margin-top: 10px; display: none; }
+    #msg.ok    { display: block; background: #d4edda; color: #155724; }
+    #msg.err   { display: block; background: #f8d7da; color: #721c24; }
+    #msg.info  { display: block; background: #d1ecf1; color: #0c5460; }
+    .danger-zone { border-top: 2px dashed #e74c3c; padding-top: 14px;
+                   margin-top: 14px; }
+    .danger-zone p { color: #95a5a6; font-size: 12px; margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <a class="back" href="/">&larr; Back to Dashboard</a>
+  <h1>WiFi Network Settings</h1>
+
+  <div class="card">
+    <h2>Current Status</h2>
+    <div class="row"><span class="k">Status</span>
+      <span><span id="curDot" class="dot dot-disconnected"></span><span id="curStatus">--</span></span></div>
+    <div class="row"><span class="k">SSID</span><span id="curSsid">--</span></div>
+    <div class="row"><span class="k">IP</span><span id="curIp">--</span></div>
+    <div class="row"><span class="k">Signal</span><span id="curRssi">--</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Available Networks <button class="scan" onclick="doScan()">&#x21bb; Rescan</button></h2>
+    <div id="scanList"><p style="color:#95a5a6; text-align:center;">Scanning...</p></div>
+  </div>
+
+  <div class="card" id="formCard" style="display:none;">
+    <h2>Connect</h2>
+    <div class="field">
+      <label>SSID</label>
+      <input id="fSsid" type="text" placeholder="Network name">
+    </div>
+    <div class="field" id="passField">
+      <label>Password</label>
+      <div class="pwrow">
+        <input id="fPass" type="password" placeholder="8-63 characters">
+        <button class="eye" type="button" onclick="togglePw()">&#128065;</button>
+      </div>
+    </div>
+    <button id="connectBtn" class="primary" onclick="doConnect()">Connect</button>
+    <div id="msg"></div>
+  </div>
+
+  <div class="card danger-zone">
+    <h2>Danger Zone</h2>
+    <button class="danger" onclick="doClear()">Clear Stored Network</button>
+    <p>Wipes saved credentials. ESP32 reverts to default network on next reboot.</p>
+  </div>
+
+<script>
+let pollTimer = null;
+
+function $(id) { return document.getElementById(id); }
+
+function show(elemId, cls, text) {
+  const el = $(elemId);
+  el.className = cls;
+  el.innerText = text;
+}
+
+function refreshStatus() {
+  return fetch('/wifi-status').then(r => r.json()).then(s => {
+    $('curDot').className = 'dot dot-' + s.status;
+    $('curStatus').innerText = s.status;
+    $('curSsid').innerText  = s.current_ssid || (s.target_ssid ? '(connecting to ' + s.target_ssid + ')' : '--');
+    $('curIp').innerText    = s.ip   || '--';
+    $('curRssi').innerText  = (s.rssi !== undefined) ? (s.rssi + ' dBm') : '--';
+    return s;
+  });
+}
+
+function rssiBars(rssi) {
+  if (rssi >= -50) return '&#9646;&#9646;&#9646;&#9646;';
+  if (rssi >= -65) return '&#9646;&#9646;&#9646;&#9647;';
+  if (rssi >= -75) return '&#9646;&#9646;&#9647;&#9647;';
+  return '&#9646;&#9647;&#9647;&#9647;';
+}
+
+function renderScan(list) {
+  const el = $('scanList');
+  if (list.length === 0) {
+    el.innerHTML = '<p style="color:#e74c3c; text-align:center;">&#9888; No networks found nearby</p>';
+    $('formCard').style.display = 'block';
+    $('fSsid').value = '';
+    $('fSsid').focus();
+    return;
+  }
+  let html = '';
+  list.forEach((ap, i) => {
+    const lock = (ap.enc === 'OPEN') ? '' : '&#128274;';
+    html += '<div class="ap" data-i="' + i + '" onclick="selectAp(' + i + ')">'
+         +    '<div><span class="ssid">' + ap.ssid + '</span> '
+         +      '<span class="meta">' + lock + '</span></div>'
+         +    '<div><span class="bars">' + rssiBars(ap.rssi) + '</span> '
+         +      '<span class="meta">' + ap.rssi + ' dBm</span></div>'
+         +  '</div>';
+  });
+  html += '<div class="ap" onclick="selectOther()" style="color:#3498db;">'
+       +    '<div>&#9656; Other (hidden network)</div></div>';
+  el.innerHTML = html;
+  window.__scanList = list;
+}
+
+function selectAp(i) {
+  document.querySelectorAll('.ap').forEach(e => e.classList.remove('selected'));
+  const target = document.querySelector('.ap[data-i="' + i + '"]');
+  if (target) target.classList.add('selected');
+  const ap = window.__scanList[i];
+  $('formCard').style.display = 'block';
+  $('fSsid').value = ap.ssid;
+  $('fSsid').readOnly = true;
+  if (ap.enc === 'OPEN') {
+    $('passField').style.display = 'none';
+    $('fPass').value = '';
+  } else {
+    $('passField').style.display = 'block';
+    $('fPass').value = '';
+    $('fPass').focus();
+  }
+}
+
+function selectOther() {
+  $('formCard').style.display = 'block';
+  $('fSsid').readOnly = false;
+  $('fSsid').value = '';
+  $('passField').style.display = 'block';
+  $('fPass').value = '';
+  $('fSsid').focus();
+}
+
+function togglePw() {
+  const f = $('fPass');
+  f.type = (f.type === 'password') ? 'text' : 'password';
+}
+
+function doScan() {
+  $('scanList').innerHTML = '<p style="color:#95a5a6; text-align:center;">Scanning...</p>';
+  fetch('/network/scan').then(r => {
+    if (r.status === 409) { show('msg', 'err', 'WiFi busy, try again shortly'); return null; }
+    if (!r.ok) { show('msg', 'err', 'Scan failed (' + r.status + ')'); return null; }
+    return r.json();
+  }).then(list => { if (list) renderScan(list); });
+}
+
+function startPolling() {
+  if (pollTimer) return;
+  let elapsed = 0;
+  pollTimer = setInterval(() => {
+    elapsed += 1;
+    refreshStatus().then(s => {
+      if (s.status === 'connected') {
+        clearInterval(pollTimer); pollTimer = null;
+        show('msg', 'ok', '\u2713 Connected to ' + s.current_ssid + ' (' + s.ip + ')');
+        $('connectBtn').disabled = false;
+        $('connectBtn').innerText = 'Connect';
+      } else if (s.status === 'failed' || elapsed >= 10) {
+        clearInterval(pollTimer); pollTimer = null;
+        show('msg', 'err', '\u2717 Failed to connect — wrong password or out of range');
+        $('fPass').value = '';
+        $('connectBtn').disabled = false;
+        $('connectBtn').innerText = 'Connect';
+      }
+    });
+  }, 1000);
+}
+
+function doConnect() {
+  const ssid = $('fSsid').value.trim();
+  const pass = $('fPass').value;
+  if (!ssid) { show('msg', 'err', 'SSID required'); return; }
+  if ($('passField').style.display !== 'none' && pass.length > 0 &&
+      (pass.length < 8 || pass.length > 63)) {
+    show('msg', 'err', 'Password must be 8-63 characters'); return;
+  }
+
+  $('connectBtn').disabled = true;
+  $('connectBtn').innerText = 'Connecting...';
+  show('msg', 'info', 'Connecting to ' + ssid + '...');
+
+  const body = 's=' + encodeURIComponent(ssid) + '&p=' + encodeURIComponent(pass);
+  fetch('/network/save', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body
+  }).then(r => {
+    if (r.status === 202) { startPolling(); }
+    else if (r.status === 409) {
+      r.json().then(d => {
+        show('msg', 'info', 'Already connecting to ' + (d.current_ssid || 'network'));
+        startPolling();
+      });
+    } else if (r.status === 400) {
+      r.json().then(d => {
+        show('msg', 'err', d.error || 'Bad request');
+        $('connectBtn').disabled = false;
+        $('connectBtn').innerText = 'Connect';
+      });
+    } else {
+      show('msg', 'err', 'Server error (' + r.status + ')');
+      $('connectBtn').disabled = false;
+      $('connectBtn').innerText = 'Connect';
+    }
+  });
+}
+
+function doClear() {
+  if (!confirm('Clear stored WiFi credentials? On next reboot, ESP32 will use the default network.')) return;
+  fetch('/network/clear', { method: 'POST' }).then(r => r.json()).then(d => {
+    show('msg', 'ok', 'Stored credentials cleared. Current connection unchanged.');
+  });
+}
+
+window.onload = function() {
+  refreshStatus().then(s => {
+    if (s.status === 'connecting') {
+      $('formCard').style.display = 'block';
+      $('connectBtn').disabled = true;
+      $('connectBtn').innerText = 'Connecting to ' + (s.target_ssid || '...');
+      startPolling();
+    }
+    doScan();
+  });
+};
+</script>
+</body>
+</html>
+)rawliteral";
+    return html;
+}
+#endif // WIFI_CONFIG_ENABLED

@@ -17,3 +17,8 @@ Example:
   String html = getIndexHTML();  // Returns full webpage content
 */
 String getIndexHTML();
+
+#include "config.h"
+#if WIFI_CONFIG_ENABLED
+String getNetworkPageHTML();
+#endif
