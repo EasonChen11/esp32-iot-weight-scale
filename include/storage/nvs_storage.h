@@ -7,3 +7,11 @@ long getAbsoluteOffset2();
 
 long getNextRecordId();
 void resetRecordId();
+
+#include <Arduino.h>
+
+// WiFi credential storage (namespace "wifi_cfg")
+void saveStaCredentials(const String &ssid, const String &pass);
+bool getStaCredentials(String &ssidOut, String &passOut);
+bool hasStoredCredentials();
+void clearStaCredentials();
