@@ -104,6 +104,97 @@ void initWiFi()
     g_wifiStatus = WIFI_STATUS_DISCONNECTED;
 }
 
+#if WIFI_CONFIG_ENABLED
+
+String getCurrentSsid()
+{
+    return g_currentSsid;
+}
+
+/*
+Validate inputs and kick off a runtime STA switch. Non-blocking: returns true
+if the attempt is now in progress; false (with error message) if rejected.
+NVS is NOT written here — only after processWifiTasks() observes success.
+*/
+bool requestStaChange(const String &ssid, const String &pass, String &errorOut)
+{
+    if (g_wifiOpBusy) {
+        errorOut = "busy";
+        return false;
+    }
+    if (ssid.length() == 0) {
+        errorOut = "SSID required";
+        return false;
+    }
+    if (pass.length() > 0 && (pass.length() < 8 || pass.length() > 63)) {
+        errorOut = "Password must be 8-63 characters";
+        return false;
+    }
+
+    g_wifiOpBusy     = true;
+    g_pendingSsid    = ssid;
+    g_pendingPass    = pass;
+    g_connectStartMs = millis();
+    g_wifiStatus     = WIFI_STATUS_CONNECTING;
+
+    WiFi.disconnect(false, true);  // keep AP up; clear stored STA config
+    WiFi.begin(ssid.c_str(), pass.c_str());
+    Serial.printf("[WiFi] Runtime switch requested: '%s'\n", ssid.c_str());
+    return true;
+}
+
+/*
+State machine driver — call from the WebAndTasks loop on every iteration.
+Detects CONNECTING → CONNECTED transition (writes NVS, triggers NTP re-sync),
+CONNECTING → FAILED transition (timeout), and router-side
+disconnect/reconnect for the heartbeat indicator.
+*/
+void processWifiTasks()
+{
+    // Runtime CONNECTING → CONNECTED (success)
+    if (g_wifiStatus == WIFI_STATUS_CONNECTING && WiFi.status() == WL_CONNECTED) {
+        saveStaCredentials(g_pendingSsid, g_pendingPass);  // NVS write only on success
+        g_currentSsid    = g_pendingSsid;
+        g_pendingSsid    = "";
+        g_pendingPass    = "";
+        g_wifiStatus     = WIFI_STATUS_CONNECTED;
+        g_wifiOpBusy     = false;
+        g_pendingNtpSync = true;
+        Serial.printf("[WiFi] Runtime connect succeeded: '%s' @ %s\n",
+                      g_currentSsid.c_str(), WiFi.localIP().toString().c_str());
+    }
+    // Runtime CONNECTING → FAILED (timeout)
+    else if (g_wifiStatus == WIFI_STATUS_CONNECTING &&
+             millis() - g_connectStartMs > WIFI_CONNECT_TIMEOUT_MS) {
+        g_pendingSsid = "";
+        g_pendingPass = "";
+        g_wifiStatus  = WIFI_STATUS_FAILED;
+        g_wifiOpBusy  = false;
+        Serial.println("[WiFi] Runtime connect failed (timeout)");
+    }
+
+    // Router-side disconnect detection
+    if (g_wifiStatus == WIFI_STATUS_CONNECTED && WiFi.status() != WL_CONNECTED) {
+        g_wifiStatus = WIFI_STATUS_DISCONNECTED;
+        Serial.println("[WiFi] STA link lost (router/AP went away?)");
+    }
+    // Auto-recovery
+    else if (g_wifiStatus == WIFI_STATUS_DISCONNECTED && WiFi.status() == WL_CONNECTED) {
+        g_wifiStatus = WIFI_STATUS_CONNECTED;
+        Serial.println("[WiFi] STA auto-reconnected");
+    }
+
+    // Deferred NTP sync after a successful runtime change
+    if (g_pendingNtpSync) {
+        g_pendingNtpSync = false;
+#if NTP_ENABLED
+        initNTP();
+#endif
+    }
+}
+
+#endif // WIFI_CONFIG_ENABLED
+
 #if NTP_ENABLED
 #include <time.h>
 #include "esp_sntp.h"
