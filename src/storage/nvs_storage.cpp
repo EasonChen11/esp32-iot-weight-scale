@@ -87,7 +87,10 @@ bool hasStoredCredentials()
 {
   Preferences prefs;
   prefs.begin("wifi_cfg", true);
-  bool has = prefs.isKey("ssid") && prefs.getString("ssid", "").length() > 0;
+  bool has = prefs.isKey("ssid");
+  if (has) {
+    has = prefs.getString("ssid", "").length() > 0;
+  }
   prefs.end();
   return has;
 }

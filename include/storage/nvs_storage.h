@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Arduino.h>
+
 void saveAbsoluteOffset(long offset);
 long getAbsoluteOffset();
 void saveAbsoluteOffset2(long offset);
@@ -7,8 +9,6 @@ long getAbsoluteOffset2();
 
 long getNextRecordId();
 void resetRecordId();
-
-#include <Arduino.h>
 
 // WiFi credential storage (namespace "wifi_cfg")
 void saveStaCredentials(const String &ssid, const String &pass);
