@@ -16,5 +16,6 @@
 
 void initDeepSleep();
 void handleDeepSleep();   // call from Core 0 loop; enters sleep after awake period
+void handleWakeButton();  // call from Core 0 loop; resets awake countdown on button press
 
 #endif // DEEP_SLEEP_ENABLED
