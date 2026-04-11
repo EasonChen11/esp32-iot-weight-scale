@@ -113,6 +113,34 @@ String getIndexHTML()
             padding: 7px 14px; font-size: 12px; border-radius: 6px;
             width: 100%; box-shadow: none;
         }
+
+        .cal-section-title {
+            margin: 12px 0 4px;
+            font-size: 12px;
+            color: #e74c3c;
+            font-weight: bold;
+            border-top: 1px dashed #f0c0c0;
+            padding-top: 8px;
+        }
+        .cal-section-title:first-of-type {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
+        }
+
+        .cal-row { display: flex; gap: 6px; margin-top: 6px; }
+        .cal-weight-input {
+            flex: 1; padding: 7px; font-size: 12px;
+            border: 1px solid #ccc; border-radius: 6px; outline: none;
+        }
+        .cal-row .btn-cal { width: auto; padding: 7px 12px; flex-shrink: 0; }
+
+        .cal-status {
+            margin: 6px 0 0; font-size: 11px; color: #7f8c8d;
+            text-align: center; min-height: 14px;
+        }
+        .cal-status.success { color: #27ae60; }
+        .cal-status.error   { color: #e74c3c; }
     </style>
 </head>
 <body>
