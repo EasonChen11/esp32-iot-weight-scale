@@ -20,6 +20,8 @@
 |----------|-----------|------|------|
 | Web `/set-zero1` | `saveAbsoluteOffset()` | 校準時才觸發 | 手動 |
 | Web `/set-zero2` | `saveAbsoluteOffset2()` | 校準時才觸發 | 手動 |
+| Web `/calibrate-scale1` | `saveScaleFactor1()` | 校正倍率時才觸發 | 手動 |
+| Web `/calibrate-scale2` | `saveScaleFactor2()` | 校正倍率時才觸發 | 手動 |
 
 ### 3. NVS 寫入 — schedule 命名空間
 
@@ -67,7 +69,7 @@ ESP32 使用的 SPI Flash 壽命規格：
 ```
 
 加上 LittleFS 的 wear leveling，實際壽命會更長。
-排程 NVS 寫入為手動操作（每月可能幾次），對壽命無影響。
+排程和校正 NVS 寫入均為手動操作（每月可能幾次），對壽命無影響。
 
 ## 讀取頻率（不影響 Flash 壽命）
 
@@ -102,6 +104,7 @@ ESP32 使用的 SPI Flash 壽命規格：
                  寫入頻率（持續模式）  寫入頻率（睡眠模式）  讀取頻率（Flash）
   LittleFS       ~25 次/天            ~2 次/天              1 次/天（僅開機）   ✅ 安全
   NVS (校準)     接近 0 次/天          接近 0 次/天           1 次/天（僅開機）   ✅ 安全
+  NVS (倍率)     接近 0 次/天          接近 0 次/天           1 次/天（僅開機）   ✅ 安全
   NVS (排程)     接近 0 次/天          接近 0 次/天           1 次/天（僅開機）   ✅ 安全
 ```
 

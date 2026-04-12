@@ -13,13 +13,15 @@
 ├───────────────┼──────────────────┼─────────────────────────────┤
 │ cached_       │ /records.json    │ scale_data/offset           │
 │  weight1/2    │ /chart.min.js.gz │ scale_data/offset2          │
-│ cachedRec-    │                  │ schedule/times              │
-│  ordsJson     │                  │                             │
+│ cachedRec-    │                  │ scale_data/scale1           │
+│  ordsJson     │                  │ scale_data/scale2           │
+│               │                  │ schedule/times              │
 └───────────────┴──────────────────┴─────────────────────────────┘
 
 RAM      = cached_weight1/2, cachedRecordsJson (lost on power off)
 LittleFS = /records.json, /chart.min.js.gz   (survives power off)
 NVS      = scale_data/offset, offset2        (survives power off)
+           scale_data/scale1, scale2         (survives power off)
            schedule/times                    (survives power off + deep sleep)
 ```
 
@@ -109,7 +111,7 @@ updateCache()     ← 更新 RAM
 
 ## 3. NVS (Preferences) — 校準偏移量 + 排程
 
-### 校準偏移量
+### 校準偏移量（零點）
 
 ```
 寫入路徑（使用者校準時）：
@@ -130,6 +132,41 @@ updateCache()     ← 更新 RAM
               │
               ▼
     initSensor(offset1, offset2) → scale.set_offset()
+```
+
+### 倍率校正（scale factor）
+
+```
+寫入路徑（使用者校正時）：
+  /calibrate-scale1 → calibrateScaleFactor1(knownWeight, err)
+                          │
+                          ├─ 驗證 knownWeight > 0.01
+                          ├─ 驗證 rawReading > MIN_RAW_THRESHOLD (50)
+                          ├─ 計算 newFactor = rawReading / knownWeight
+                          ├─ 驗證 newFactor 在 1000 ~ 500000 之間
+                          │
+                          ▼
+                      saveScaleFactor1(newFactor)
+                          │
+                          ▼
+                      Preferences.begin("scale_data")
+                      Preferences.putFloat("scale1", factor)
+                      Preferences.end()
+                          │
+                          ▼
+                      scale1.set_scale(newFactor) ← 即時套用
+
+讀取路徑（僅開機時）：
+  setup() → initSensor()
+              │
+              ▼
+    hasScaleFactor1() → getScaleFactor1()
+              │
+              ├─ NVS 有值 → 使用 NVS 值
+              └─ NVS 無值 → 使用 config.h 編譯期預設值
+              │
+              ▼
+    scale1.set_scale(factor)
 ```
 
 ### 喚醒排程
@@ -162,6 +199,8 @@ updateCache()     ← 更新 RAM
 |-------------|-----|------|----------|----------|
 | `scale_data` | `offset` | Sensor 1 零點偏移 | `/set-zero1` 校準 | 開機 1 次 |
 | `scale_data` | `offset2` | Sensor 2 零點偏移 | `/set-zero2` 校準 | 開機 1 次 |
+| `scale_data` | `scale1` | Sensor 1 倍率 | `/calibrate-scale1` 校正 | 開機 1 次 |
+| `scale_data` | `scale2` | Sensor 2 倍率 | `/calibrate-scale2` 校正 | 開機 1 次 |
 | `schedule` | `times` | 喚醒時間 CSV | Web 新增/刪除排程 | 開機 1 次 |
 
 ## 完整資料流向圖

@@ -9,9 +9,10 @@
 │  Static      │  Data API    │  Control API                       │
 │  /           │  /data       │  /tare, /tare1, /tare2             │
 │  /chartjs    │  /data1      │  /set-zero1, /set-zero2            │
-│              │  /data2      │  /sync                             │
-│              │  /time       │  /add-record, /del-record          │
-│              │  /get-records│  /clear-records                    │
+│              │  /data2      │  /calibrate-scale1, /calibrate-scale2│
+│              │  /time       │  /sync                             │
+│              │  /get-records│  /add-record, /del-record          │
+│              │              │  /clear-records                    │
 │              │              │  /get-schedule, /add-schedule      │
 │              │              │  /del-schedule                     │
 └──────────────┴──────────────┴────────────────────────────────────┘
@@ -43,6 +44,9 @@ initWebRoutes(server)
        │
        ├─ server.on("/set-zero1") → captureAbsoluteOffset1() + saveAbsoluteOffset()  (NVS)
        ├─ server.on("/set-zero2") → captureAbsoluteOffset2() + saveAbsoluteOffset2() (NVS)
+       │
+       ├─ server.on("/calibrate-scale1") → calibrateScaleFactor1(w) + saveScaleFactor1() (NVS)
+       ├─ server.on("/calibrate-scale2") → calibrateScaleFactor2(w) + saveScaleFactor2() (NVS)
        │
        ├─ server.on("/get-schedule")  → getScheduleJson()        (RAM)
        ├─ server.on("/add-schedule")  → addScheduleEntry(h, m)   (RAM + NVS)
@@ -112,6 +116,7 @@ GET /del-schedule?i=0
         使用者操作                              使用者操作
 瀏覽器 ──→ /add-record ──→ RAM + Flash    瀏覽器 ──→ /tare1 ──→ HX711 RAM
 瀏覽器 ──→ /del-record ──→ RAM + Flash    瀏覽器 ──→ /set-zero1 ──→ NVS Flash
+                                          瀏覽器 ──→ /calibrate-scale1 ──→ NVS Flash
 
         排程操作
 瀏覽器 ──→ /add-schedule ──→ RAM + NVS
