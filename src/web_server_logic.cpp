@@ -29,19 +29,23 @@ Endpoints:
   Control : /tare1, /tare2, /tare, /sync, /add-record, /del-record,
             /clear-records, /set-zero1, /set-zero2
 */
-void initWebRoutes(WebServer &server)
-{
 #if DEV_MODE_ENABLED
-    auto requireDevMode = [&server]() -> bool {
-        if (!isDevMode()) {
-            server.sendHeader("Cache-Control", "no-store");
-            server.send(403, "text/plain", "Developer mode required");
-            return false;
-        }
-        return true;
-    };
+// File-scope helper. Lambdas defined inside initWebRoutes() are local objects
+// that get destroyed when initWebRoutes() returns; calling them later from a
+// registered handler is undefined behavior. A free function lives forever.
+static bool requireDevMode(WebServer &server)
+{
+    if (!isDevMode()) {
+        server.sendHeader("Cache-Control", "no-store");
+        server.send(403, "text/plain", "Developer mode required");
+        return false;
+    }
+    return true;
+}
 #endif
 
+void initWebRoutes(WebServer &server)
+{
     // Root: serve the main dashboard
     server.on("/", [&server]()
               {
@@ -210,10 +214,10 @@ void initWebRoutes(WebServer &server)
                   server.send(202, "application/json",
                               "{\"status\":\"connecting\"}"); });
 
-    server.on("/network/clear", HTTP_POST, [&]()
+    server.on("/network/clear", HTTP_POST, [&server]()
               {
 #if DEV_MODE_ENABLED
-                  if (!requireDevMode()) return;
+                  if (!requireDevMode(server)) return;
 #endif
                   server.sendHeader("Cache-Control", "no-store");
                   clearStaCredentials();
@@ -362,9 +366,9 @@ void initWebRoutes(WebServer &server)
 #endif
 
 #if DEV_MODE_ENABLED
-    server.on("/factory-reset", HTTP_POST, [&]()
+    server.on("/factory-reset", HTTP_POST, [&server]()
               {
-                  if (!requireDevMode()) return;
+                  if (!requireDevMode(server)) return;
                   server.sendHeader("Cache-Control", "no-store");
                   bool full = (server.arg("full") == "1");
 
