@@ -17,7 +17,7 @@ String getIndexHTML()
 <head>
     <meta name='viewport' content='width=device-width, initial-scale=1.0'>
     <meta charset='UTF-8'>
-    <title>ESP32 Beehive Weight Monitor</title>
+    <title>ESP32 蜂箱重量監控</title>
     <style>
         * { box-sizing: border-box; }
         body { font-family: Arial, sans-serif; text-align: center;
@@ -153,16 +153,16 @@ String getIndexHTML()
         <span id="netDot" class="dot dot-disconnected"></span>
         <span id="netSsid">--</span>
         <span id="netIp"></span>
-        <a href="/network" id="netLink">&#9881; Network</a>
+        <a href="/network" id="netLink">&#9881; 網路</a>
     </div>
-    <div id="clock">System time: --:--:--</div>
+    <div id="clock">系統時間：--:--:--</div>
 
     <div class="grid">
 
         <!-- ── Sensor 1 panel ──────────────────────────────────────── -->
         <div class="card">
-            <h1>Sensor 1</h1>
-            <div class="subtitle">Left side load cell</div>
+            <h1>感測器 1</h1>
+            <div class="subtitle">左側載重元件</div>
             <div id="weight1" class="weight-display s1-color">0.00</div>
             <div class="unit">kg</div>
             <div class="btn-group">
@@ -190,8 +190,8 @@ String getIndexHTML()
 
         <!-- ── Sensor 2 panel ──────────────────────────────────────── -->
         <div class="card">
-            <h1>Sensor 2</h1>
-            <div class="subtitle">Right side load cell</div>
+            <h1>感測器 2</h1>
+            <div class="subtitle">右側載重元件</div>
             <div id="weight2" class="weight-display s2-color">0.00</div>
             <div class="unit">kg</div>
             <div class="btn-group">
@@ -219,45 +219,45 @@ String getIndexHTML()
 
         <!-- ── Total panel ─────────────────────────────────────────── -->
         <div class="card">
-            <h1>Total Weight</h1>
-            <div class="subtitle">Beehive (S1 + S2)</div>
+            <h1>總重量</h1>
+            <div class="subtitle">蜂箱 (S1 + S2)</div>
             <div id="weightTotal" class="weight-display tot-color">0.00</div>
             <div class="unit">kg</div>
             <div class="chart-container">
                 <canvas id="chartTotal"></canvas>
             </div>
             <div class="btn-group">
-                <button class="btn-record" onclick="addRecord()">Record Data</button>
-                <button class="btn-sched" onclick="syncSheets()">Sync Sheets</button>
+                <button class="btn-record" onclick="addRecord()">記錄資料</button>
+                <button class="btn-sched" onclick="syncSheets()">同步至 Sheets</button>
             </div>
 
             <div class="table-container">
-                <h3 id="recordsTitle" style="color:#555; font-size:15px;">Recent Records</h3>
+                <h3 id="recordsTitle" style="color:#555; font-size:15px;">近期紀錄</h3>
                 <div class="table-scroll">
                     <table>
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <th>Date</th>
-                                <th>Time</th>
+                                <th>日期</th>
+                                <th>時間</th>
                                 <th>S1 (kg)</th>
                                 <th>S2 (kg)</th>
                                 <th>Total (kg)</th>
-                                <th>Del</th>
+                                <th>刪除</th>
                             </tr>
                         </thead>
                         <tbody id="recordBody"></tbody>
                     </table>
                 </div>
-                <button class="btn-clear-all" onclick="clearAll()">Clear All Records</button>
+                <button class="btn-clear-all" onclick="clearAll()">清空所有紀錄</button>
                 {{DEV_FACTORY_BUTTONS}}
             </div>
         </div>
 
         <!-- ── Wake-up Schedule panel ──────────────────────────────── -->
         <div class="card">
-            <h1>Wake-up Schedule</h1>
-            <div class="subtitle">Daily deep-sleep wake times (max 10)</div>
+            <h1>喚醒排程</h1>
+            <div class="subtitle">每日深度睡眠喚醒時間（上限 10 組）</div>
 
             <div style="display:flex; gap:8px; justify-content:center; align-items:center; margin:16px 0;">
                 <select id="schedHour" style="padding:8px; border-radius:6px; border:1px solid #ccc; font-size:15px;">
@@ -265,11 +265,11 @@ String getIndexHTML()
                 <span style="font-size:18px; font-weight:bold;">:</span>
                 <select id="schedMin" style="padding:8px; border-radius:6px; border:1px solid #ccc; font-size:15px;">
                 </select>
-                <button class="btn-sched" onclick="addSchedule()">Add</button>
+                <button class="btn-sched" onclick="addSchedule()">新增</button>
             </div>
 
             <div id="schedList" style="text-align:left; max-width:260px; margin:0 auto;"></div>
-            <button class="btn-clear-all" onclick="clearSchedule()" style="margin-top:12px;">Clear All Schedule</button>
+            <button class="btn-clear-all" onclick="clearSchedule()" style="margin-top:12px;">清空所有排程</button>
         </div>
 
     </div><!-- .grid -->
@@ -345,7 +345,7 @@ String getIndexHTML()
         /* ── Clock ──────────────────────────────────────────────────── */
         setInterval(function() {
             document.getElementById('clock').innerText =
-                'System time: ' + new Date().toLocaleTimeString('en-US', { hour12: false });
+                '系統時間：' + new Date().toLocaleTimeString('en-US', { hour12: false });
         }, 1000);
 
         /* ── Tare ───────────────────────────────────────────────────── */
@@ -450,11 +450,11 @@ String getIndexHTML()
             const titleEl = document.getElementById('recordsTitle');
             if (titleEl) {
                 if (total === 0) {
-                    titleEl.innerText = 'Recent Records (none)';
+                    titleEl.innerText = '近期紀錄（無）';
                 } else if (total <= visible.length) {
-                    titleEl.innerText = `Recent Records (${total})`;
+                    titleEl.innerText = `近期紀錄（${total}）`;
                 } else {
-                    titleEl.innerText = `Recent Records (latest ${visible.length} of ${total})`;
+                    titleEl.innerText = `近期紀錄（最新 ${visible.length} / 共 ${total}）`;
                 }
             }
         }
@@ -502,7 +502,7 @@ String getIndexHTML()
         }
 
         function clearAll() {
-            if (!confirm('清空所有歷史紀錄？此動作無法復原（ID 計數器不會重置）。')) return;
+            if (!confirm('清空所有歷史紀錄？此動作無法復原。')) return;
             fetch('/clear-records')
                 .then(r => r.json())
                 .then(renderTable)
@@ -530,12 +530,12 @@ String getIndexHTML()
         /* ── Google Sheets sync ─────────────────────────────────────── */
         function syncSheets() {
             const btn = event.target;
-            btn.innerText = 'Syncing...';
+            btn.innerText = '同步中...';
             btn.disabled = true;
             fetch('/sync-sheets')
                 .then(r => r.text())
-                .then(msg => { alert(msg); btn.innerText = 'Sync Sheets'; btn.disabled = false; })
-                .catch(() => { alert('Sync failed'); btn.innerText = 'Sync Sheets'; btn.disabled = false; });
+                .then(msg => { alert(msg); btn.innerText = '同步至 Sheets'; btn.disabled = false; })
+                .catch(() => { alert('同步失敗'); btn.innerText = '同步至 Sheets'; btn.disabled = false; });
         }
 
         /* ── Schedule ───────────────────────────────────────────────── */
