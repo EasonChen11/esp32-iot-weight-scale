@@ -365,7 +365,7 @@ String getIndexHTML()
             const btn = event.target;
             openConfirm(
                 '絕對歸零 — 感測器 ' + sensor,
-                '確認感測器 ' + sensor + ' 完全沒有負載。此動作會覆寫 NVS 內的零點偏移。',
+                '確認感測器 ' + sensor + ' 完全沒有負載。',
                 () => {
                     const orig = btn.innerHTML;
                     btn.innerHTML = '校正中...';
@@ -401,7 +401,7 @@ String getIndexHTML()
 
             openConfirm(
                 '倍率校正 — 感測器 ' + sensor,
-                '以 ' + w + ' kg 為基準校正感測器 ' + sensor + ' 的倍率。請確認重物已放在感測器上。此動作會覆寫 NVS 內的校正倍率。',
+                '以 ' + w + ' kg 為基準校正感測器 ' + sensor + ' 的倍率。請確認重物已放在感測器上。',
                 () => {
                     const orig = btn.innerText;
                     btn.disabled = true;
