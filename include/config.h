@@ -10,6 +10,7 @@
 #define MQTT_ENABLED false
 #define AUTO_LOGGER_ENABLED true
 #define OLED_ENABLED false
+#define DEV_MODE_ENABLED true   // serial-controlled runtime developer mode (RAM only, no NVS)
 #define GOOGLE_SHEETS_ENABLED true
 #define WIFI_CONFIG_ENABLED true
 #define SIMULATE_SENSOR false
