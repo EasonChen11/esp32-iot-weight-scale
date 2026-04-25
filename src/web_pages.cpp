@@ -1,4 +1,8 @@
 #include "web_pages.h"
+#include "config.h"
+#if DEV_MODE_ENABLED
+#include "dev_mode.h"
+#endif
 
 /*
 Generate the complete HTML content for the main dashboard page.
@@ -144,6 +148,7 @@ String getIndexHTML()
     </style>
 </head>
 <body>
+{{DEV_BANNER}}
     <div id="netbar">
         <span id="netDot" class="dot dot-disconnected"></span>
         <span id="netSsid">--</span>
@@ -245,6 +250,7 @@ String getIndexHTML()
                     </table>
                 </div>
                 <button class="btn-clear-all" onclick="clearAll()">Clear All Records</button>
+                {{DEV_FACTORY_BUTTONS}}
             </div>
         </div>
 
@@ -269,6 +275,7 @@ String getIndexHTML()
 
     <script src="/chartjs"></script>
     <script>
+        const PAGE_RENDERED_DEV = {{PAGE_RENDERED_DEV}};
         const MAX_PTS = 30;
         const MAX_VISIBLE_RECORDS = 20;
         let chartTotal;
@@ -589,6 +596,32 @@ String getIndexHTML()
 </body>
 </html>
 )rawliteral";
+#if DEV_MODE_ENABLED
+    bool dev = isDevMode();
+    if (dev) {
+        html.replace("{{DEV_BANNER}}",
+            "<div style=\"background:#c0392b; color:white; padding:8px; "
+            "text-align:center; font-weight:bold; font-size:14px;\">"
+            "&#9888; DEVELOPER MODE &mdash; remember to disable before delivery (or just reboot)"
+            "</div>");
+        html.replace("{{DEV_FACTORY_BUTTONS}}",
+            "<button class=\"btn-clear-all\" style=\"border:2px solid #c0392b; "
+            "background:#7f1f1a;\" onclick=\"factoryReset(false)\">"
+            "&#x1F527; Factory Reset</button>"
+            "<button class=\"btn-clear-all\" style=\"border:2px solid #c0392b; "
+            "background:#7f1f1a;\" onclick=\"factoryReset(true)\">"
+            "&#x1F527; Factory Reset (FULL)</button>");
+    } else {
+        html.replace("{{DEV_BANNER}}", "");
+        html.replace("{{DEV_FACTORY_BUTTONS}}", "");
+    }
+    html.replace("{{PAGE_RENDERED_DEV}}", dev ? "true" : "false");
+#else
+    html.replace("{{DEV_BANNER}}", "");
+    html.replace("{{DEV_FACTORY_BUTTONS}}", "");
+    html.replace("{{PAGE_RENDERED_DEV}}", "false");
+#endif
+
     return html;
 }
 
@@ -902,9 +935,27 @@ window.onload = function() {
   });
 };
 </script>
+{{DEV_NETWORK_BUTTONS}}
 </body>
 </html>
 )rawliteral";
+#if DEV_MODE_ENABLED
+    if (isDevMode()) {
+        html.replace("{{DEV_NETWORK_BUTTONS}}",
+            "<div class=\"card\" style=\"border:2px solid #c0392b;\">"
+            "<h2 style=\"color:#c0392b;\">&#x1F527; Developer</h2>"
+            "<button class=\"primary\" style=\"background:#c0392b;\" "
+            "onclick=\"clearWifiCreds()\">Clear WiFi credentials (NVS)</button>"
+            "<p style=\"font-size:13px; color:#7f8c8d;\">"
+            "Removes saved credentials so the device falls back to the compile-time SSID at next boot."
+            "</p></div>");
+    } else {
+        html.replace("{{DEV_NETWORK_BUTTONS}}", "");
+    }
+#else
+    html.replace("{{DEV_NETWORK_BUTTONS}}", "");
+#endif
+
     return html;
 }
 #endif // WIFI_CONFIG_ENABLED
