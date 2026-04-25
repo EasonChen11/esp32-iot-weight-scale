@@ -354,27 +354,28 @@ String getIndexHTML()
 
         /* ── 絕對歸零 ──────────────────────────────────────────────── */
         function setZero(sensor, event) {
-            const code = prompt("確認感測器 " + sensor + " 完全沒有負載，輸入 'RESET' 確認：");
-            if (code !== "RESET") {
-                if (code !== null) alert("輸入不正確 — 校正取消");
-                return;
-            }
             const btn = event.target;
-            const orig = btn.innerHTML;
-            btn.innerHTML = "校正中...";
-            btn.disabled = true;
-            fetch('/set-zero' + sensor)
-                .then(r => r.text())
-                .then(() => {
-                    alert("感測器 " + sensor + " 零點已儲存");
-                    btn.innerHTML = orig;
-                    btn.disabled = false;
-                })
-                .catch(() => {
-                    alert("校正失敗 — 檢查連線");
-                    btn.innerHTML = orig;
-                    btn.disabled = false;
-                });
+            openConfirm(
+                '絕對歸零 — 感測器 ' + sensor,
+                '確認感測器 ' + sensor + ' 完全沒有負載。此動作會覆寫 NVS 內的零點偏移。',
+                () => {
+                    const orig = btn.innerHTML;
+                    btn.innerHTML = '校正中...';
+                    btn.disabled = true;
+                    fetch('/set-zero' + sensor)
+                        .then(r => r.text())
+                        .then(() => {
+                            alert('感測器 ' + sensor + ' 零點已儲存');
+                            btn.innerHTML = orig;
+                            btn.disabled = false;
+                        })
+                        .catch(() => {
+                            alert('校正失敗 — 檢查連線');
+                            btn.innerHTML = orig;
+                            btn.disabled = false;
+                        });
+                }
+            );
         }
 
         /* ── 倍率校正 ──────────────────────────────────────────────── */
@@ -390,35 +391,37 @@ String getIndexHTML()
                 return;
             }
 
-            if (!confirm("確定要以 " + w + " kg 為基準校正感測器 " + sensor + " 的倍率嗎？\n請確認重物已放在感測器上。")) {
-                return;
-            }
+            openConfirm(
+                '倍率校正 — 感測器 ' + sensor,
+                '以 ' + w + ' kg 為基準校正感測器 ' + sensor + ' 的倍率。請確認重物已放在感測器上。此動作會覆寫 NVS 內的校正倍率。',
+                () => {
+                    const orig = btn.innerText;
+                    btn.disabled = true;
+                    btn.innerText = '校正中...';
+                    status.className = 'cal-status';
+                    status.innerText = '校正中...（取樣 10 筆）';
 
-            const orig = btn.innerText;
-            btn.disabled = true;
-            btn.innerText = '校正中...';
-            status.className = 'cal-status';
-            status.innerText = '校正中...（取樣 10 筆）';
-
-            fetch('/calibrate-scale' + sensor + '?w=' + encodeURIComponent(w))
-                .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
-                .then(({ ok, body }) => {
-                    if (ok && body.factor) {
-                        status.className = 'cal-status success';
-                        status.innerText = '✓ 已套用校正值 (' + body.factor.toFixed(2) + ')';
-                    } else {
-                        status.className = 'cal-status error';
-                        status.innerText = '✗ ' + (body.error || '校正失敗');
-                    }
-                })
-                .catch(err => {
-                    status.className = 'cal-status error';
-                    status.innerText = '✗ 網路錯誤 — ' + err.message;
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerText = orig;
-                });
+                    fetch('/calibrate-scale' + sensor + '?w=' + encodeURIComponent(w))
+                        .then(r => r.json().then(d => ({ ok: r.ok, body: d })))
+                        .then(({ ok, body }) => {
+                            if (ok && body.factor) {
+                                status.className = 'cal-status success';
+                                status.innerText = '✓ 已套用校正值 (' + body.factor.toFixed(2) + ')';
+                            } else {
+                                status.className = 'cal-status error';
+                                status.innerText = '✗ ' + (body.error || '校正失敗');
+                            }
+                        })
+                        .catch(err => {
+                            status.className = 'cal-status error';
+                            status.innerText = '✗ 網路錯誤 — ' + err.message;
+                        })
+                        .finally(() => {
+                            btn.disabled = false;
+                            btn.innerText = orig;
+                        });
+                }
+            );
         }
 
         /* ── Records ────────────────────────────────────────────────── */
@@ -499,16 +502,11 @@ String getIndexHTML()
         }
 
         function clearAll() {
-            openConfirm(
-                'Clear All Records',
-                '此動作會清空所有歷史紀錄，且無法復原。ID 計數器不會重置。',
-                () => {
-                    fetch('/clear-records')
-                        .then(r => r.json())
-                        .then(renderTable)
-                        .catch(err => console.error('Clear failed', err));
-                }
-            );
+            if (!confirm('清空所有歷史紀錄？此動作無法復原（ID 計數器不會重置）。')) return;
+            fetch('/clear-records')
+                .then(r => r.json())
+                .then(renderTable)
+                .catch(err => console.error('Clear failed', err));
         }
 
         function factoryReset(full) {
@@ -589,16 +587,11 @@ String getIndexHTML()
         }
 
         function clearSchedule() {
-            openConfirm(
-                'Clear All Schedule',
-                '此動作會刪除所有喚醒時間設定。',
-                () => {
-                    fetch('/clear-schedule', { method: 'POST' })
-                        .then(r => r.json())
-                        .then(renderSchedule)
-                        .catch(err => console.error('Clear schedule failed', err));
-                }
-            );
+            if (!confirm('刪除所有喚醒時間設定？')) return;
+            fetch('/clear-schedule', { method: 'POST' })
+                .then(r => r.json())
+                .then(renderSchedule)
+                .catch(err => console.error('Clear schedule failed', err));
         }
 
         /* ── Init ───────────────────────────────────────────────────── */
