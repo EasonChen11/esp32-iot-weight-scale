@@ -50,6 +50,11 @@ void initWebRoutes(WebServer &server)
     server.on("/", [&server]()
               {
                   server.sendHeader("Cache-Control", "max-age=300, must-revalidate");
+#if DEV_MODE_ENABLED
+                  server.sendHeader("ETag", isDevMode() ? "\"v1-dev\"" : "\"v1-user\"");
+#else
+                  server.sendHeader("ETag", "\"v1-user\"");
+#endif
                   server.send(200, "text/html", getIndexHTML()); });
 
     // Chart.js served locally from LittleFS (no CDN — works in AP mode)
