@@ -716,7 +716,7 @@ String getNetworkPageHTML()
 <head>
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
   <meta charset='UTF-8'>
-  <title>WiFi Network Settings</title>
+  <title>WiFi 網路設定</title>
   <style>
     * { box-sizing: border-box; }
     body { font-family: Arial, sans-serif; background: #f4f4f4;
@@ -782,44 +782,39 @@ String getNetworkPageHTML()
   </style>
 </head>
 <body>
-  <a class="back" href="/">&larr; Back to Dashboard</a>
-  <h1>WiFi Network Settings</h1>
+{{DEV_BANNER}}
+  <a class="back" href="/">&larr; 返回主控台</a>
+  <h1>WiFi 網路設定</h1>
 
   <div class="card">
-    <h2>Current Status</h2>
-    <div class="row"><span class="k">Status</span>
+    <h2>目前狀態</h2>
+    <div class="row"><span class="k">狀態</span>
       <span><span id="curDot" class="dot dot-disconnected"></span><span id="curStatus">--</span></span></div>
     <div class="row"><span class="k">SSID</span><span id="curSsid">--</span></div>
     <div class="row"><span class="k">IP</span><span id="curIp">--</span></div>
-    <div class="row"><span class="k">Signal</span><span id="curRssi">--</span></div>
+    <div class="row"><span class="k">訊號強度</span><span id="curRssi">--</span></div>
   </div>
 
   <div class="card">
-    <h2>Available Networks <button class="scan" onclick="doScan()">&#x21bb; Rescan</button></h2>
-    <div id="scanList"><p style="color:#95a5a6; text-align:center;">Click &#x21bb; Rescan to find networks</p></div>
+    <h2>可用網路 <button class="scan" onclick="doScan()">&#x21bb; 重新掃描</button></h2>
+    <div id="scanList"><p style="color:#95a5a6; text-align:center;">點擊 &#x21bb; 重新掃描以搜尋網路</p></div>
   </div>
 
   <div class="card" id="formCard" style="display:none;">
-    <h2>Connect</h2>
+    <h2>連線</h2>
     <div class="field">
       <label>SSID</label>
-      <input id="fSsid" type="text" placeholder="Network name">
+      <input id="fSsid" type="text" placeholder="網路名稱">
     </div>
     <div class="field" id="passField">
-      <label>Password</label>
+      <label>密碼</label>
       <div class="pwrow">
-        <input id="fPass" type="password" placeholder="8-63 characters">
+        <input id="fPass" type="password" placeholder="8-63 個字元">
         <button class="eye" type="button" onclick="togglePw()">&#128065;</button>
       </div>
     </div>
-    <button id="connectBtn" class="primary" onclick="doConnect()">Connect</button>
+    <button id="connectBtn" class="primary" onclick="doConnect()">連線</button>
     <div id="msg"></div>
-  </div>
-
-  <div class="card danger-zone">
-    <h2>Danger Zone</h2>
-    <button class="danger" onclick="doClear()">Clear Stored Network</button>
-    <p>Wipes saved credentials. ESP32 reverts to default network on next reboot.</p>
   </div>
 
 <script>
@@ -862,7 +857,7 @@ function rssiBars(rssi) {
 function renderScan(list) {
   const el = $('scanList');
   if (list.length === 0) {
-    el.innerHTML = '<p style="color:#e74c3c; text-align:center;">&#9888; No networks found nearby</p>';
+    el.innerHTML = '<p style="color:#e74c3c; text-align:center;">&#9888; 附近沒有可用網路</p>';
     $('formCard').style.display = 'block';
     $('fSsid').value = '';
     $('fSsid').focus();
@@ -879,7 +874,7 @@ function renderScan(list) {
          +  '</div>';
   });
   html += '<div class="ap" onclick="selectOther()" style="color:#3498db;">'
-       +    '<div>&#9656; Other (hidden network)</div></div>';
+       +    '<div>&#9656; 其他（隱藏網路）</div></div>';
   el.innerHTML = html;
   window.__scanList = list;
 }
@@ -919,11 +914,11 @@ function togglePw() {
 function doScan() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   $('connectBtn').disabled = false;
-  $('connectBtn').innerText = 'Connect';
-  $('scanList').innerHTML = '<p style="color:#95a5a6; text-align:center;">Scanning...</p>';
+  $('connectBtn').innerText = '連線';
+  $('scanList').innerHTML = '<p style="color:#95a5a6; text-align:center;">掃描中...</p>';
   fetch('/network/scan').then(r => {
-    if (r.status === 409) { show('msg', 'err', 'WiFi busy, try again shortly'); return null; }
-    if (!r.ok) { show('msg', 'err', 'Scan failed (' + r.status + ')'); return null; }
+    if (r.status === 409) { show('msg', 'err', 'WiFi 忙碌，請稍後再試'); return null; }
+    if (!r.ok) { show('msg', 'err', '掃描失敗 (' + r.status + ')'); return null; }
     return r.json();
   }).then(list => { if (list) renderScan(list); }).catch(() => {});
 }
@@ -936,15 +931,15 @@ function startPolling() {
     refreshStatus().then(s => {
       if (s.status === 'connected') {
         clearInterval(pollTimer); pollTimer = null;
-        show('msg', 'ok', '\u2713 Connected to ' + s.current_ssid + ' (' + s.ip + ')');
+        show('msg', 'ok', '\u2713 \u5df2\u9023\u7dda\u5230 ' + s.current_ssid + ' (' + s.ip + ')');
         $('connectBtn').disabled = false;
-        $('connectBtn').innerText = 'Connect';
+        $('connectBtn').innerText = '連線';
       } else if (s.status === 'failed' || elapsed >= 10) {
         clearInterval(pollTimer); pollTimer = null;
-        show('msg', 'err', '\u2717 Failed to connect — wrong password or out of range');
+        show('msg', 'err', '\u2717 連線失敗 — 密碼錯誤或超出範圍');
         $('fPass').value = '';
         $('connectBtn').disabled = false;
-        $('connectBtn').innerText = 'Connect';
+        $('connectBtn').innerText = '連線';
       }
     });
   }, 1000);
@@ -953,15 +948,15 @@ function startPolling() {
 function doConnect() {
   const ssid = $('fSsid').value.trim();
   const pass = $('fPass').value;
-  if (!ssid) { show('msg', 'err', 'SSID required'); return; }
+  if (!ssid) { show('msg', 'err', '請輸入 SSID'); return; }
   if ($('passField').style.display !== 'none' && pass.length > 0 &&
       (pass.length < 8 || pass.length > 63)) {
-    show('msg', 'err', 'Password must be 8-63 characters'); return;
+    show('msg', 'err', '密碼長度必須為 8-63 個字元'); return;
   }
 
   $('connectBtn').disabled = true;
-  $('connectBtn').innerText = 'Connecting...';
-  show('msg', 'info', 'Connecting to ' + ssid + '...');
+  $('connectBtn').innerText = '連線中...';
+  show('msg', 'info', '連線到 ' + ssid + '...');
 
   const body = 's=' + encodeURIComponent(ssid) + '&p=' + encodeURIComponent(pass);
   fetch('/network/save', {
@@ -972,31 +967,24 @@ function doConnect() {
     if (r.status === 202) { startPolling(); }
     else if (r.status === 409) {
       r.json().then(d => {
-        show('msg', 'info', 'Already connecting to ' + (d.current_ssid || 'network'));
+        show('msg', 'info', '連線到 ' + (d.current_ssid || '...'));
         startPolling();
       });
     } else if (r.status === 400) {
       r.json().then(d => {
-        show('msg', 'err', d.error || 'Bad request');
+        show('msg', 'err', d.error || '請求錯誤');
         $('connectBtn').disabled = false;
-        $('connectBtn').innerText = 'Connect';
+        $('connectBtn').innerText = '連線';
       });
     } else {
-      show('msg', 'err', 'Server error (' + r.status + ')');
+      show('msg', 'err', '伺服器錯誤 (' + r.status + ')');
       $('connectBtn').disabled = false;
-      $('connectBtn').innerText = 'Connect';
+      $('connectBtn').innerText = '連線';
     }
   }).catch(() => {
-    show('msg', 'err', 'Network error — check connection');
+    show('msg', 'err', '網路錯誤 — 請檢查連線');
     $('connectBtn').disabled = false;
-    $('connectBtn').innerText = 'Connect';
-  });
-}
-
-function doClear() {
-  if (!confirm('Clear stored WiFi credentials? On next reboot, ESP32 will use the default network.')) return;
-  fetch('/network/clear', { method: 'POST' }).then(r => r.json()).then(d => {
-    show('msg', 'ok', 'Stored credentials cleared. Current connection unchanged.');
+    $('connectBtn').innerText = '連線';
   });
 }
 
@@ -1005,7 +993,7 @@ window.onload = function() {
     if (s.status === 'connecting') {
       $('formCard').style.display = 'block';
       $('connectBtn').disabled = true;
-      $('connectBtn').innerText = 'Connecting to ' + (s.target_ssid || '...');
+      $('connectBtn').innerText = '連線到 ' + (s.target_ssid || '...');
       startPolling();
     }
   });
@@ -1076,7 +1064,13 @@ function clearWifiCreds() {
 </html>
 )rawliteral";
 #if DEV_MODE_ENABLED
-    if (isDevMode()) {
+    bool dev = isDevMode();
+    if (dev) {
+        html.replace("{{DEV_BANNER}}",
+            "<div style=\"background:#c0392b; color:white; padding:8px; "
+            "text-align:center; font-weight:bold; font-size:14px;\">"
+            "&#9888; DEVELOPER MODE &mdash; remember to disable before delivery (or just reboot)"
+            "</div>");
         html.replace("{{DEV_NETWORK_BUTTONS}}",
             "<div class=\"card\" style=\"border:2px solid #c0392b;\">"
             "<h2 style=\"color:#c0392b;\">&#x1F527; Developer</h2>"
@@ -1086,9 +1080,11 @@ function clearWifiCreds() {
             "Removes saved credentials so the device falls back to the compile-time SSID at next boot."
             "</p></div>");
     } else {
+        html.replace("{{DEV_BANNER}}", "");
         html.replace("{{DEV_NETWORK_BUTTONS}}", "");
     }
 #else
+    html.replace("{{DEV_BANNER}}", "");
     html.replace("{{DEV_NETWORK_BUTTONS}}", "");
 #endif
 
