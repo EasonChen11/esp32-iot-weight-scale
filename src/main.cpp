@@ -27,6 +27,9 @@
 #if DEEP_SLEEP_ENABLED
 #include "deep_sleep_manager.h"
 #endif
+#if DEV_MODE_ENABLED
+#include "dev_mode.h"
+#endif
 
 #if WEB_SERVER_ENABLED
 WebServer server(80);
@@ -145,6 +148,9 @@ void setup()
   );
 
   Serial.println("[System] System initialization complete, dual-core mode active");
+#if DEV_MODE_ENABLED
+  printBootModeBanner();
+#endif
 }
 
 void loop()
