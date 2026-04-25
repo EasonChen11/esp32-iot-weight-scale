@@ -332,6 +332,12 @@ void initWebRoutes(WebServer &server)
                   int idx = server.arg("i").toInt();
                   removeScheduleEntry(idx);
                   server.send(200, "application/json", getScheduleJson()); });
+
+    server.on("/clear-schedule", HTTP_POST, [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  clearAllScheduleEntries();
+                  server.send(200, "application/json", getScheduleJson()); });
 #endif
 
 #if GOOGLE_SHEETS_ENABLED
