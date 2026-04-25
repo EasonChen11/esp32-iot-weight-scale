@@ -339,6 +339,14 @@ String getIndexHTML()
                             data.wifi.ip ? '\u00b7 ' + data.wifi.ip : '';
                     }
                 }
+
+                // Mode flip detection \u2014 reload page so SSR re-renders dev DOM
+                if (typeof PAGE_RENDERED_DEV !== 'undefined'
+                    && typeof data.dev !== 'undefined'
+                    && data.dev !== PAGE_RENDERED_DEV) {
+                    console.log('[Mode] flip detected (' + PAGE_RENDERED_DEV + ' -> ' + data.dev + '), reloading');
+                    location.reload();
+                }
             }).catch(() => {});
         }, 1000);
 
