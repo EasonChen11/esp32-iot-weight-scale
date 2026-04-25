@@ -210,8 +210,11 @@ void initWebRoutes(WebServer &server)
                   server.send(202, "application/json",
                               "{\"status\":\"connecting\"}"); });
 
-    server.on("/network/clear", HTTP_POST, [&server]()
+    server.on("/network/clear", HTTP_POST, [&]()
               {
+#if DEV_MODE_ENABLED
+                  if (!requireDevMode()) return;
+#endif
                   server.sendHeader("Cache-Control", "no-store");
                   clearStaCredentials();
                   server.send(200, "application/json",
@@ -356,6 +359,33 @@ void initWebRoutes(WebServer &server)
                   body += isDevMode() ? "true" : "false";
                   body += "}";
                   server.send(200, "application/json", body); });
+#endif
+
+#if DEV_MODE_ENABLED
+    server.on("/factory-reset", HTTP_POST, [&]()
+              {
+                  if (!requireDevMode()) return;
+                  server.sendHeader("Cache-Control", "no-store");
+                  bool full = (server.arg("full") == "1");
+
+                  // Always: clear records + reset ID counter (preserves calibration)
+                  clearRecordsInStorage();
+                  resetRecordId();
+
+                  if (full) {
+#if WIFI_CONFIG_ENABLED
+                      clearStaCredentials();
+#endif
+#if SCHEDULE_ENABLED
+                      clearAllScheduleEntries();
+#endif
+                  }
+
+                  Serial.printf("[Web] Factory reset%s done\n", full ? " (full)" : "");
+                  String msg = full
+                      ? "Factory reset (full) done. Calibration preserved."
+                      : "Factory reset done. Calibration / WiFi / schedule preserved.";
+                  server.send(200, "text/plain", msg); });
 #endif
 
     server.onNotFound([&server]()
