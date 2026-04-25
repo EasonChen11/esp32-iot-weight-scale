@@ -95,6 +95,7 @@ All modules can be toggled independently in `config.h`:
 #define MQTT_ENABLED            false
 #define AUTO_LOGGER_ENABLED     true
 #define OLED_ENABLED            true
+#define DEV_MODE_ENABLED        true
 #define GOOGLE_SHEETS_ENABLED   true
 #define NTP_ENABLED             true
 #define SCHEDULE_ENABLED        true
@@ -106,6 +107,28 @@ Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_S
 `WIFI_CONFIG_ENABLED` requires `WIFI_ENABLED` and `WEB_SERVER_ENABLED`, and adds a heartbeat status indicator to the main dashboard with a runtime WiFi configuration subpage at `/network`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
 `GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL in `config_secrets.h`.
+
+### Developer Mode
+
+Some destructive endpoints (`POST /factory-reset`, `POST /network/clear`) are hidden from the user UI and rejected with HTTP 403 unless the device is in **Developer Mode**. This mode lives in RAM only and resets to USER on every reboot — so a device cannot accidentally ship to a customer with developer privileges left on.
+
+**Switching via serial monitor (115200 baud):**
+
+| Command | Effect |
+|---|---|
+| `dev-on` | Enable developer mode |
+| `dev-off` | Disable developer mode |
+| `dev-status` | Print current mode |
+
+When dev mode flips, any open dashboard tab auto-reloads within ~1 s (via `/tick` polling) so the developer buttons appear or disappear automatically.
+
+**Developer-only endpoints:**
+
+- `POST /factory-reset` — Clears records and resets the ID counter; preserves calibration, WiFi, schedule.
+- `POST /factory-reset?full=1` — Above + clears WiFi NVS + schedule. Calibration still preserved.
+- `POST /network/clear` — Clears WiFi NVS so the device falls back to the compile-time SSID at next boot.
+
+**⚠️ Google Sheets warning:** After a `/factory-reset`, manually clear the matching rows in your Google Sheet. The receiver script dedups by ID and silently acks duplicates, which would cause silent data loss on the next sync if the new ID-1 record collides with the old one.
 
 > For a full explanation of each switch and their interactions, see the [**Wiki — System Overview**](https://github.com/EasonChen11/esp32-iot-weight-scale/wiki).
 

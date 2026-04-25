@@ -9,12 +9,15 @@
 │  Static      │  Data API    │  Control API                       │
 │  /           │  /data       │  /tare, /tare1, /tare2             │
 │  /chartjs    │  /data1      │  /set-zero1, /set-zero2            │
-│              │  /data2      │  /calibrate-scale1, /calibrate-scale2│
-│              │  /time       │  /sync                             │
-│              │  /get-records│  /add-record, /del-record          │
-│              │              │  /clear-records                    │
-│              │              │  /get-schedule, /add-schedule      │
-│              │              │  /del-schedule                     │
+│  /network    │  /data2      │  /calibrate-scale1, /calibrate-scale2│
+│              │  /tick       │  /sync                             │
+│              │  /time       │  /add-record, /del-record          │
+│              │  /get-records│  /clear-records                    │
+│              │  /dev-status │  /get-schedule, /add-schedule      │
+│              │              │  /del-schedule, /clear-schedule    │
+│              │              │  ── 🔧 Dev-only (HTTP 403 在 user) ──│
+│              │              │  /factory-reset[?full=1]           │
+│              │              │  /network/clear                    │
 └──────────────┴──────────────┴────────────────────────────────────┘
 ```
 
@@ -48,13 +51,22 @@ initWebRoutes(server)
        ├─ server.on("/calibrate-scale1") → calibrateScaleFactor1(w) + saveScaleFactor1() (NVS)
        ├─ server.on("/calibrate-scale2") → calibrateScaleFactor2(w) + saveScaleFactor2() (NVS)
        │
-       ├─ server.on("/get-schedule")  → getScheduleJson()        (RAM)
-       ├─ server.on("/add-schedule")  → addScheduleEntry(h, m)   (RAM + NVS)
-       └─ server.on("/del-schedule")  → removeScheduleEntry(i)   (RAM + NVS)
+       ├─ server.on("/get-schedule")    → getScheduleJson()          (RAM)
+       ├─ server.on("/add-schedule")    → addScheduleEntry(h, m)     (RAM + NVS)
+       ├─ server.on("/del-schedule")    → removeScheduleEntry(i)     (RAM + NVS)
+       ├─ server.on("/clear-schedule", HTTP_POST) → clearAllScheduleEntries()  (RAM + NVS)
+       │
+       │  ── Dev mode 開關後解鎖（需 requireDevMode guard，否則回 HTTP 403）────
+       ├─ server.on("/dev-status")          → {"dev": true|false}
+       ├─ server.on("/factory-reset", HTTP_POST) → clearRecordsInStorage() + resetRecordId()
+       │   (?full=1 額外: clearStaCredentials() + clearAllScheduleEntries())
+       └─ server.on("/network/clear", HTTP_POST) → clearStaCredentials()  (NVS)
        │
        ▼
   server.begin()
 ```
+
+> Dev mode 的完整機制（serial 切換、boot 預設、UI auto-reload、SSR 條件渲染）見 `15-dev-mode-flow.md`。
 
 ## 排程端點詳細
 
