@@ -17,6 +17,9 @@
 #if GOOGLE_SHEETS_ENABLED
 #include "google_sheets_manager.h"
 #endif
+#if DEV_MODE_ENABLED
+#include "dev_mode.h"
+#endif
 
 /*
 Initialize and register all HTTP routes for the web server.
@@ -85,6 +88,10 @@ void initWebRoutes(WebServer &server)
                               + ",\"s2\":" + String(getCachedWeight2(), 2);
 #if WIFI_CONFIG_ENABLED
                   json += ",\"wifi\":" + getWifiStatusJson();
+#endif
+#if DEV_MODE_ENABLED
+                  json += ",\"dev\":";
+                  json += isDevMode() ? "true" : "false";
 #endif
                   json += "}";
                   server.send(200, "application/json", json); });
@@ -325,6 +332,16 @@ void initWebRoutes(WebServer &server)
                   server.sendHeader("Cache-Control", "no-store");
                   String result = triggerGoogleSheetsSync();
                   server.send(200, "text/plain", result); });
+#endif
+
+#if DEV_MODE_ENABLED
+    server.on("/dev-status", [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  String body = "{\"dev\":";
+                  body += isDevMode() ? "true" : "false";
+                  body += "}";
+                  server.send(200, "application/json", body); });
 #endif
 
     server.onNotFound([&server]()
