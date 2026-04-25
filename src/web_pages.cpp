@@ -269,6 +269,7 @@ String getIndexHTML()
             </div>
 
             <div id="schedList" style="text-align:left; max-width:260px; margin:0 auto;"></div>
+            <button class="btn-clear-all" onclick="clearSchedule()" style="margin-top:12px;">Clear All Schedule</button>
         </div>
 
     </div><!-- .grid -->
@@ -498,10 +499,34 @@ String getIndexHTML()
         }
 
         function clearAll() {
-            if (confirm("Delete all historical records? This cannot be undone.")) {
-                fetch('/clear-records').then(r => r.json()).then(renderTable)
-                    .catch(err => console.error("Clear failed", err));
-            }
+            openConfirm(
+                'Clear All Records',
+                '此動作會清空所有歷史紀錄，且無法復原。ID 計數器不會重置。',
+                () => {
+                    fetch('/clear-records')
+                        .then(r => r.json())
+                        .then(renderTable)
+                        .catch(err => console.error('Clear failed', err));
+                }
+            );
+        }
+
+        function factoryReset(full) {
+            const title = full ? 'FULL Factory Reset' : 'Factory Reset';
+            const msg = full
+                ? '⚠️ 此動作會清除所有 records、重置 ID、清除 WiFi 認證與排程。校正值會保留。'
+                : '⚠️ 此動作會清除所有 records 與重置 ID。校正、WiFi、排程會保留。\n\n注意：若有啟用 Google Sheets 同步，請手動清除 sheet 對應 row 以避免 silent dedup loss。';
+            openConfirm(title, msg, () => {
+                fetch('/factory-reset' + (full ? '?full=1' : ''), { method: 'POST' })
+                    .then(r => r.text())
+                    .then(text => {
+                        alert(text);
+                        location.reload();
+                    })
+                    .catch(err => {
+                        alert('Factory reset failed: ' + err);
+                    });
+            });
         }
 
         /* ── Google Sheets sync ─────────────────────────────────────── */
@@ -561,6 +586,19 @@ String getIndexHTML()
                 .then(r => r.json())
                 .then(renderSchedule)
                 .catch(err => console.error('[delSchedule] failed:', err));
+        }
+
+        function clearSchedule() {
+            openConfirm(
+                'Clear All Schedule',
+                '此動作會刪除所有喚醒時間設定。',
+                () => {
+                    fetch('/clear-schedule', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(renderSchedule)
+                        .catch(err => console.error('Clear schedule failed', err));
+                }
+            );
         }
 
         /* ── Init ───────────────────────────────────────────────────── */
@@ -1004,6 +1042,21 @@ function acceptConfirm() {
     const cb = __confirmCallback;
     closeConfirm();
     if (cb) cb();
+}
+
+function clearWifiCreds() {
+    openConfirm(
+        'Clear WiFi credentials',
+        '此動作會清除 NVS 內的 WiFi 認證，下次開機會 fallback 到 compile-time SSID。',
+        () => {
+            fetch('/network/clear', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    alert('WiFi credentials cleared. Reboot to apply.');
+                })
+                .catch(err => alert('Clear failed: ' + err));
+        }
+    );
 }
 </script>
 <!-- Reusable confirm modal -->
