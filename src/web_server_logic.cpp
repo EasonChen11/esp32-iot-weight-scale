@@ -31,6 +31,17 @@ Endpoints:
 */
 void initWebRoutes(WebServer &server)
 {
+#if DEV_MODE_ENABLED
+    auto requireDevMode = [&server]() -> bool {
+        if (!isDevMode()) {
+            server.sendHeader("Cache-Control", "no-store");
+            server.send(403, "text/plain", "Developer mode required");
+            return false;
+        }
+        return true;
+    };
+#endif
+
     // Root: serve the main dashboard
     server.on("/", [&server]()
               {
@@ -236,9 +247,6 @@ void initWebRoutes(WebServer &server)
               {
                   server.sendHeader("Cache-Control", "no-store");
                   clearRecordsInStorage();
-#if SIMULATE_SENSOR
-                  resetRecordId();
-#endif
                   server.send(200, "application/json", "[]"); });
 
     // ── Absolute zero calibration ─────────────────────────────────────
