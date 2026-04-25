@@ -158,6 +158,9 @@ void loop()
   // Core 1: sensor reads + OLED (neither needs network)
   // Keeping OLED here frees Core 0 entirely for web + MQTT
   updateSensor();
+#if DEV_MODE_ENABLED
+  handleSerialModeCommand();
+#endif
 #if OLED_ENABLED
   handleOLED();
 #endif

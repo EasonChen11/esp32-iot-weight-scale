@@ -18,6 +18,29 @@ void printBootModeBanner()
                   g_devMode ? "DEVELOPER" : "USER");
 }
 
-void handleSerialModeCommand() { /* Task 3 fills this in */ }
+void handleSerialModeCommand()
+{
+    static String buf;
+    while (Serial.available()) {
+        char c = (char)Serial.read();
+        if (c == '\r') continue;
+        if (c == '\n') {
+            buf.trim();
+            if (buf.length() > 0) {
+                if      (buf == "dev-on")     setDevMode(true);
+                else if (buf == "dev-off")    setDevMode(false);
+                else if (buf == "dev-status") {
+                    Serial.printf("[Mode] Current: %s\n",
+                                  isDevMode() ? "DEVELOPER" : "USER");
+                }
+                // Unknown commands silently ignored.
+            }
+            buf = "";
+        } else if (buf.length() < 32) {
+            buf += c;
+        }
+        // overflow chars are dropped (next newline resets the buffer)
+    }
+}
 
 #endif // DEV_MODE_ENABLED
