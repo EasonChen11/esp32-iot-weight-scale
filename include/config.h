@@ -9,7 +9,7 @@
 #define WEB_SERVER_ENABLED true
 #define MQTT_ENABLED false
 #define AUTO_LOGGER_ENABLED true
-#define OLED_ENABLED true
+#define OLED_ENABLED false
 #define GOOGLE_SHEETS_ENABLED true
 #define WIFI_CONFIG_ENABLED true
 #define SIMULATE_SENSOR false
