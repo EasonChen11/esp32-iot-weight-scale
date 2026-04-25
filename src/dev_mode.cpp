@@ -23,8 +23,9 @@ void handleSerialModeCommand()
     static String buf;
     while (Serial.available()) {
         char c = (char)Serial.read();
-        if (c == '\r') continue;
-        if (c == '\n') {
+        // Accept LF, CR, or CRLF as line terminator. Empty buffer between
+        // CR and LF is harmless (filtered by buf.length() check below).
+        if (c == '\r' || c == '\n') {
             buf.trim();
             if (buf.length() > 0) {
                 if      (buf == "dev-on")     setDevMode(true);
