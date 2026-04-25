@@ -12,6 +12,7 @@ void   initSchedule();
 int    getScheduleCount();
 bool   addScheduleEntry(uint8_t hour, uint8_t minute);
 bool   removeScheduleEntry(int index);
+void   clearAllScheduleEntries();
 String getScheduleJson();
 int    getNextWakeupSeconds();   // seconds until next scheduled time (-1 if none)
 

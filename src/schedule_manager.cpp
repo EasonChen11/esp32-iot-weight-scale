@@ -117,6 +117,16 @@ bool removeScheduleEntry(int index)
     return true;
 }
 
+void clearAllScheduleEntries()
+{
+    // Wipe both the in-memory list and the NVS-persisted copy
+    // by repeatedly calling removeScheduleEntry on the head until empty.
+    while (getScheduleCount() > 0) {
+        removeScheduleEntry(0);
+    }
+    Serial.println("[Schedule] All entries cleared");
+}
+
 String getScheduleJson()
 {
     String json = "[";
