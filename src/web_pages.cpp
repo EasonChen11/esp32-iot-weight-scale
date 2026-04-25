@@ -592,7 +592,52 @@ String getIndexHTML()
 
             setInterval(fetchRecords, 60000);
         };
+
+        /* ── Reusable confirm modal ────────────────────────────────── */
+        let __confirmCallback = null;
+        function openConfirm(title, message, callback) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmMessage').innerText = message;
+            const input = document.getElementById('confirmInput');
+            input.value = '';
+            const okBtn = document.getElementById('confirmOkBtn');
+            okBtn.disabled = true;
+            input.oninput = () => {
+                okBtn.disabled = input.value.trim() !== 'CONFIRM';
+            };
+            __confirmCallback = callback;
+            document.getElementById('confirmModal').style.display = 'flex';
+            input.focus();
+        }
+        function closeConfirm() {
+            document.getElementById('confirmModal').style.display = 'none';
+            __confirmCallback = null;
+        }
+        function acceptConfirm() {
+            const cb = __confirmCallback;
+            closeConfirm();
+            if (cb) cb();
+        }
     </script>
+<!-- Reusable confirm modal -->
+<div id="confirmModal" style="display:none; position:fixed; inset:0;
+     background:rgba(0,0,0,0.5); z-index:1000;
+     align-items:center; justify-content:center;">
+  <div style="background:white; padding:24px; border-radius:8px;
+       max-width:420px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+    <h3 id="confirmTitle" style="margin:0 0 8px;">Confirm</h3>
+    <p id="confirmMessage" style="margin:8px 0 16px; color:#444;"></p>
+    <p style="font-size:13px; color:#666;">輸入 <code style="background:#eee; padding:2px 6px; border-radius:3px;">CONFIRM</code> 以啟用：</p>
+    <input id="confirmInput" type="text"
+           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" />
+    <div style="text-align:right; margin-top:16px;">
+      <button onclick="closeConfirm()" style="margin-right:8px; padding:8px 16px;">取消</button>
+      <button id="confirmOkBtn" disabled onclick="acceptConfirm()"
+              style="padding:8px 16px; background:#c0392b; color:white;
+                     border:none; border-radius:4px; cursor:pointer;">執行</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 )rawliteral";
@@ -934,7 +979,52 @@ window.onload = function() {
     }
   });
 };
+
+/* ── Reusable confirm modal ────────────────────────────────── */
+let __confirmCallback = null;
+function openConfirm(title, message, callback) {
+    document.getElementById('confirmTitle').innerText = title;
+    document.getElementById('confirmMessage').innerText = message;
+    const input = document.getElementById('confirmInput');
+    input.value = '';
+    const okBtn = document.getElementById('confirmOkBtn');
+    okBtn.disabled = true;
+    input.oninput = () => {
+        okBtn.disabled = input.value.trim() !== 'CONFIRM';
+    };
+    __confirmCallback = callback;
+    document.getElementById('confirmModal').style.display = 'flex';
+    input.focus();
+}
+function closeConfirm() {
+    document.getElementById('confirmModal').style.display = 'none';
+    __confirmCallback = null;
+}
+function acceptConfirm() {
+    const cb = __confirmCallback;
+    closeConfirm();
+    if (cb) cb();
+}
 </script>
+<!-- Reusable confirm modal -->
+<div id="confirmModal" style="display:none; position:fixed; inset:0;
+     background:rgba(0,0,0,0.5); z-index:1000;
+     align-items:center; justify-content:center;">
+  <div style="background:white; padding:24px; border-radius:8px;
+       max-width:420px; width:90%; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+    <h3 id="confirmTitle" style="margin:0 0 8px;">Confirm</h3>
+    <p id="confirmMessage" style="margin:8px 0 16px; color:#444;"></p>
+    <p style="font-size:13px; color:#666;">輸入 <code style="background:#eee; padding:2px 6px; border-radius:3px;">CONFIRM</code> 以啟用：</p>
+    <input id="confirmInput" type="text"
+           style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" />
+    <div style="text-align:right; margin-top:16px;">
+      <button onclick="closeConfirm()" style="margin-right:8px; padding:8px 16px;">取消</button>
+      <button id="confirmOkBtn" disabled onclick="acceptConfirm()"
+              style="padding:8px 16px; background:#c0392b; color:white;
+                     border:none; border-radius:4px; cursor:pointer;">執行</button>
+    </div>
+  </div>
+</div>
 {{DEV_NETWORK_BUTTONS}}
 </body>
 </html>
