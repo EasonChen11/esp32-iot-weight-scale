@@ -30,6 +30,9 @@
 #if DEV_MODE_ENABLED
 #include "dev_mode.h"
 #endif
+#if OTA_ENABLED
+#include "ota_manager.h"
+#endif
 
 #if WEB_SERVER_ENABLED
 WebServer server(80);
@@ -79,6 +82,16 @@ void WebAndTasksCode(void *pvParameters)
 
 #if GOOGLE_SHEETS_ENABLED
     handleGoogleSheetsSync();
+#endif
+
+#if OTA_ENABLED && WIFI_ENABLED
+    // Check for a firmware update exactly once, after WiFi has come up.
+    static bool otaChecked = false;
+    if (!otaChecked && WiFi.status() == WL_CONNECTED)
+    {
+        otaChecked = true;
+        checkOtaUpdate();
+    }
 #endif
 
 #if DEEP_SLEEP_ENABLED
@@ -134,6 +147,10 @@ void setup()
 
 #if DEEP_SLEEP_ENABLED
   initDeepSleep();
+#endif
+
+#if OTA_ENABLED
+  initOTA();
 #endif
 
   // 2. Create task pinned to core 0
