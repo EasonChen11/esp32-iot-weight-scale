@@ -17,7 +17,7 @@ Returns:
 
 Example:
   WebServer server(80);
-  initWebRoutes(server);  // Setup all routes and start server
+  initWebRoutes(server);     (sets up all routes and starts the server)
 */
 void initWebRoutes(WebServer &server);
 

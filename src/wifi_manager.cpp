@@ -248,12 +248,14 @@ String scanNetworksJson()
     String json = "[";
     for (int i = 0; i < n; i++) {
         if (i > 0) json += ",";
-        String ssid = WiFi.SSID(i);
+        // WiFi scan accessors take a uint8_t index; the scan count is small.
+        uint8_t idx = (uint8_t)i;
+        String ssid = WiFi.SSID(idx);
         // Escape backslashes and double quotes for JSON safety
         ssid.replace("\\", "\\\\");
         ssid.replace("\"", "\\\"");
-        const char *enc = (WiFi.encryptionType(i) == WIFI_AUTH_OPEN) ? "OPEN" : "WPA2";
-        json += "{\"ssid\":\"" + ssid + "\",\"rssi\":" + String(WiFi.RSSI(i))
+        const char *enc = (WiFi.encryptionType(idx) == WIFI_AUTH_OPEN) ? "OPEN" : "WPA2";
+        json += "{\"ssid\":\"" + ssid + "\",\"rssi\":" + String(WiFi.RSSI(idx))
               + ",\"enc\":\"" + enc + "\"}";
     }
     json += "]";

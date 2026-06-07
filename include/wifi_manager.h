@@ -22,7 +22,7 @@ Returns:
   void
 
 Example:
-  initWiFi();  // Start AP hotspot + attempt STA connection for MQTT
+  initWiFi();     (starts AP hotspot + attempts STA connection for MQTT)
 */
 void initWiFi();
 

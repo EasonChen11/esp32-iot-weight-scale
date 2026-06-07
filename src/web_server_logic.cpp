@@ -155,7 +155,7 @@ void initWebRoutes(WebServer &server)
 #endif
                   time_t t = (time_t)server.arg("t").substring(0, 10).toInt();
                   struct timeval tv = { .tv_sec = t, .tv_usec = 0 };
-                  settimeofday(&tv, NULL);
+                  settimeofday(&tv, nullptr);
 #if NTP_ENABLED
                   setTimeSynced(true);
 #endif
@@ -332,7 +332,11 @@ void initWebRoutes(WebServer &server)
                   server.sendHeader("Cache-Control", "no-store");
                   int h = server.arg("h").toInt();
                   int m = server.arg("m").toInt();
-                  if (addScheduleEntry(h, m)) {
+                  // Validate the int range *before* narrowing to uint8_t: an
+                  // out-of-range value like 256 would otherwise wrap (e.g. to 0)
+                  // and slip past addScheduleEntry's own bounds check.
+                  if (h >= 0 && h <= 23 && m >= 0 && m <= 59 &&
+                      addScheduleEntry((uint8_t)h, (uint8_t)m)) {
                       server.send(200, "application/json", getScheduleJson());
                   } else {
                       server.send(400, "text/plain", "Invalid or duplicate time");
