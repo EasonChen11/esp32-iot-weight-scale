@@ -61,8 +61,9 @@ static void _loadFromNVS()
             int h = token.substring(0, colon).toInt();
             int m = token.substring(colon + 1).toInt();
             if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-                entries[entryCount].hour = h;
-                entries[entryCount].minute = m;
+                // Range-checked above, so the narrowing to uint8_t is safe.
+                entries[entryCount].hour = (uint8_t)h;
+                entries[entryCount].minute = (uint8_t)m;
                 entryCount++;
             }
         }

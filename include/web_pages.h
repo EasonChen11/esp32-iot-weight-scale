@@ -15,7 +15,7 @@ Returns:
   String: Complete HTML document as a single string
 
 Example:
-  String html = getIndexHTML();  // Returns full webpage content
+  String html = getIndexHTML();     (returns the full webpage content)
 */
 String getIndexHTML();
 

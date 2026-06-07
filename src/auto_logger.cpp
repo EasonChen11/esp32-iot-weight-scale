@@ -10,7 +10,6 @@
 #include <time.h>
 
 // State tracking for logging events
-static int lastRecordedHour = -1;
 static unsigned long bootTime = 0;
 static bool startupRecordDone = false;
 
@@ -102,6 +101,9 @@ void handleAutoLogging()
 
     // --- Logic B: Hourly logging (disabled in deep sleep mode) ---
 #if !DEEP_SLEEP_ENABLED
+    // Last hour we logged. Declared here because hourly logging only exists
+    // when deep sleep is disabled — keeps it out of the build otherwise.
+    static int lastRecordedHour = -1;
     if (timeReliable)
     {
         if (timeinfo.tm_hour != lastRecordedHour)

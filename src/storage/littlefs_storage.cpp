@@ -6,14 +6,14 @@
 static const char *FILE_PATH = "/records.json";
 static String cachedRecordsJson = "[]";
 
-static void saveJsonToFile(JsonDocument &doc)
+static void saveJsonToFile(const JsonDocument &doc)
 {
   File file = LittleFS.open(FILE_PATH, "w");
   serializeJson(doc, file);
   file.close();
 }
 
-static void updateCache(JsonDocument &doc)
+static void updateCache(const JsonDocument &doc)
 {
   cachedRecordsJson = "";
   serializeJson(doc, cachedRecordsJson);
@@ -55,7 +55,7 @@ String getRecordsJson()
   return cachedRecordsJson;
 }
 
-void addRecordToStorage(long id, String date, String time, String sensor1, String sensor2)
+void addRecordToStorage(long id, const String &date, const String &time, const String &sensor1, const String &sensor2)
 {
   JsonDocument doc;
   deserializeJson(doc, cachedRecordsJson);

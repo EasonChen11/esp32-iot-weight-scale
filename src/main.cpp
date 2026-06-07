@@ -36,7 +36,7 @@ WebServer server(80);
 #endif
 
 // 1. Define task handle for FreeRTOS task
-TaskHandle_t WebTaskHandle = NULL;
+TaskHandle_t WebTaskHandle = nullptr;
 
 /*
 WebAndTasksCode
@@ -141,7 +141,7 @@ void setup()
       WebAndTasksCode, /* 任務函式 */
       "WebAndTasks",   /* 任務名稱 */
       24576,            /* 堆疊大小 (Stack size) — increased for WiFiClientSecure TLS */
-      NULL,            /* 傳入參數 */
+      nullptr,         /* 傳入參數 */
       1,               /* 優先級 */
       &WebTaskHandle,  /* 任務句柄 */
       0                /* 固定在核心 0 */
