@@ -4,6 +4,10 @@ name: Release firmware (OTA)
 # Push a semver tag (e.g. `v1.2.0`) to build the firmware and publish a GitHub
 # Release with `firmware.bin` + `manifest.json` — the two assets the device's OTA
 # updater pulls from `releases/latest/download/...`.
+#
+# The release is self-verifying: the `release` job `needs:` the `verify` (build
+# matrix) and `lint` (cppcheck) jobs, so a tag with a broken build or a HIGH static
+# defect publishes nothing. This mirrors the gates in pio-build.yml.
 on:
   push:
     tags:
@@ -13,8 +17,91 @@ permissions:
   contents: write   # required to create the GitHub Release
 
 jobs:
+  # Gate 1 — same build matrix as pio-build.yml: proves every #if-guard combination
+  # still compiles, not just the shipped default config.
+  verify:
+    name: Verify build (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            flags: ""
+          - name: simulate-sensor
+            flags: "-DSIMULATE_SENSOR=true"
+          - name: mqtt-oled-on
+            flags: "-DMQTT_ENABLED=true -DOLED_ENABLED=true"
+          - name: minimal
+            flags: "-DMQTT_ENABLED=false -DGOOGLE_SHEETS_ENABLED=false -DOLED_ENABLED=false -DAUTO_LOGGER_ENABLED=false"
+          - name: offline
+            flags: "-DWIFI_ENABLED=false -DWEB_SERVER_ENABLED=false -DMQTT_ENABLED=false -DNTP_ENABLED=false -DGOOGLE_SHEETS_ENABLED=false -DWIFI_CONFIG_ENABLED=false"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO & pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Provide placeholder secrets
+        run: cp include/config_secrets.h.example include/config_secrets.h
+
+      - name: Build firmware (${{ matrix.name }})
+        env:
+          PLATFORMIO_BUILD_FLAGS: ${{ matrix.flags }}
+        run: pio run
+
+  # Gate 2 — static analysis, same bar as pio-build.yml's lint job.
+  lint:
+    name: Static analysis (cppcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO & pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Provide placeholder secrets
+        run: cp include/config_secrets.h.example include/config_secrets.h
+
+      - name: Run static analysis
+        run: pio check --fail-on-defect=high
+
+  # Publish only after both gates pass.
   release:
     name: Build & publish OTA release
+    needs: [verify, lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -57,11 +144,7 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # Gate the release on the same static-analysis bar as CI (pio-build.yml lint job).
-      # A failing step stops the job, so nothing gets published on a HIGH defect.
-      - name: Static analysis (cppcheck)
-        run: pio check --fail-on-defect=high
-
+      # Ships the default config (no flags) — that is the binary devices run.
       - name: Build firmware
         run: pio run
 
