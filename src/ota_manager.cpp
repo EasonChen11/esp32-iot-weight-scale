@@ -170,16 +170,17 @@ static bool downloadAndApply(const OtaManifest &m)
     }
     http.end();
 
-    uint8_t digest[32];
-    mbedtls_sha256_finish(&sha, digest);
-    mbedtls_sha256_free(&sha);
-
     if (written != total)
     {
         Serial.printf("[OTA] truncated: %d/%d bytes\n", written, total);
+        mbedtls_sha256_free(&sha);
         Update.abort();
         return false;
     }
+
+    uint8_t digest[32];
+    mbedtls_sha256_finish(&sha, digest);
+    mbedtls_sha256_free(&sha);
 
     String got = toHex(digest, 32);
     if (!got.equalsIgnoreCase(m.sha256))
@@ -193,6 +194,7 @@ static bool downloadAndApply(const OtaManifest &m)
     if (!Update.end(true))
     {
         Serial.printf("[OTA] Update.end failed: %s\n", Update.errorString());
+        Update.abort();
         return false;
     }
 
