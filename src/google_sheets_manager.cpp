@@ -4,6 +4,7 @@
 #include "google_sheets_manager.h"
 #include "storage/littlefs_storage.h"
 #include "auto_logger.h"
+#include "storage/nvs_storage.h"
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -87,8 +88,20 @@ String triggerGoogleSheetsSync()
 
     Serial.printf("[GSheets] Syncing %d records...\n", unsyncedArr.size());
 
+    // Resolve URL + token: NVS-provisioned values take precedence over the
+    // compile-time defaults. This lets OTA-built firmware (which ships with
+    // placeholder secrets) keep syncing once the operator runs `sheets-set`.
+    String sheetsUrl, sheetsToken;
+    if (getSheetsConfig(sheetsUrl, sheetsToken)) {
+        Serial.println("[GSheets] using NVS-provisioned URL/token");
+    } else {
+        sheetsUrl = String(GOOGLE_SHEETS_URL);
+        sheetsToken = String(GOOGLE_SHEETS_TOKEN);
+        Serial.println("[GSheets] using compile-time URL/token");
+    }
+
     JsonDocument postDoc;
-    postDoc["token"] = GOOGLE_SHEETS_TOKEN; // shared secret validated by the GAS receiver
+    postDoc["token"] = sheetsToken; // shared secret validated by the GAS receiver
     JsonArray records = postDoc["records"].to<JsonArray>();
     // Send oldest first (flash stores newest first) so GAS appends in chronological order
     for (int i = unsyncedArr.size() - 1; i >= 0; i--)
@@ -108,7 +121,7 @@ String triggerGoogleSheetsSync()
     client.setInsecure();
 
     String response;
-    int httpCode = gasPost(client, String(GOOGLE_SHEETS_URL), postBody, response);
+    int httpCode = gasPost(client, sheetsUrl, postBody, response);
 
     if (httpCode == 200)
     {
