@@ -17,3 +17,6 @@ docker/mosquitto/log/
 
 CLAUDE.md
 .claudeignore
+
+# Superpowers workflow artifacts (spec/plan) — not committed
+docs/superpowers/
