@@ -54,7 +54,7 @@ static bool isNewerVersion(const char *current, const char *candidate)
 // Attach the Arduino-ESP32 built-in Mozilla CA bundle so any valid public
 // certificate verifies — this also survives GitHub's 302 redirect to
 // objects.githubusercontent.com (a different CA than github.com).
-extern const uint8_t rootca_crt_bundle_start[] asm("_binary_data_cert_x509_crt_bundle_bin_start");
+extern const uint8_t rootca_crt_bundle_start[] asm("_binary_cert_x509_crt_bundle_bin_start");
 
 static bool fetchManifest(OtaManifest &out)
 {
