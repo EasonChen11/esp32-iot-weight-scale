@@ -94,3 +94,36 @@ jobs:
 
       - name: Build filesystem image
         run: pio run -t buildfs
+
+  lint:
+    name: Static analysis (cppcheck)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO & pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Provide placeholder secrets
+        run: cp include/config_secrets.h.example include/config_secrets.h
+
+      # Settings (tool, severity, src filters, suppressions) live in platformio.ini
+      # so this matches a local `pio check`. Fail the job on any HIGH defect.
+      - name: Run static analysis
+        run: pio check --fail-on-defect=high
