@@ -1,0 +1,76 @@
+name: Release firmware (OTA)
+
+# Continuous Delivery counterpart to pio-build.yml (CI).
+# Push a semver tag (e.g. `v1.2.0`) to build the firmware and publish a GitHub
+# Release with `firmware.bin` + `manifest.json` — the two assets the device's OTA
+# updater pulls from `releases/latest/download/...`.
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write   # required to create the GitHub Release
+
+jobs:
+  release:
+    name: Build & publish OTA release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO & pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      # CI has no real secrets; the example file's placeholders compile fine.
+      - name: Provide placeholder secrets
+        run: cp include/config_secrets.h.example include/config_secrets.h
+
+      # Single source of truth for the version is platformio.ini's FIRMWARE_VERSION.
+      # The tag must match it, otherwise the device would advertise a version that
+      # disagrees with the release — fail loudly instead of shipping a mismatch.
+      - name: Derive version from tag and verify it matches platformio.ini
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"   # v1.2.0 -> 1.2.0
+          PIO_VERSION="$(grep FIRMWARE_VERSION platformio.ini | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')"
+          echo "tag version: $VERSION    platformio.ini: $PIO_VERSION"
+          if [ "$VERSION" != "$PIO_VERSION" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} (version $VERSION) does not match FIRMWARE_VERSION=$PIO_VERSION in platformio.ini. Bump platformio.ini, commit, then re-tag."
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build firmware
+        run: pio run
+
+      - name: Generate manifest.json
+        run: python scripts/make_manifest.py "${{ steps.version.outputs.version }}" .pio/build/esp32dev/firmware.bin
+
+      # gh is pre-installed on ubuntu-latest. The newest non-prerelease becomes
+      # "latest", which is exactly what the device's permanent OTA URL points at.
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            .pio/build/esp32dev/firmware.bin \
+            .pio/build/esp32dev/manifest.json \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes

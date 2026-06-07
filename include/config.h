@@ -92,6 +92,9 @@ const unsigned long WAKE_BTN_STARTUP_GRACE_MS = 2000; // Ignore button presses f
 
 // OTA (Over-The-Air update) — requires WIFI_ENABLED
 // Permanent URL that always points at the newest GitHub release's assets.
+// NOT a secret: this is a public, unauthenticated download link (anyone can fetch a
+// public release), so it lives here in config.h rather than config_secrets.h. It is
+// deployment config, though — a fork pointing at its own releases must edit this URL.
 const char *const OTA_MANIFEST_URL =
     "https://github.com/EasonChen11/esp32-iot-weight-scale/releases/latest/download/manifest.json";
 const unsigned long OTA_HTTP_TIMEOUT_MS = 15000; // per-request HTTPS timeout
