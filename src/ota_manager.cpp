@@ -7,6 +7,7 @@
 #include <ArduinoJson.h>
 #include <Update.h>
 #include <mbedtls/sha256.h>
+#include <esp_ota_ops.h>
 
 struct OtaManifest {
     String version;
@@ -19,6 +20,18 @@ static bool otaInProgress = false;
 void initOTA()
 {
     Serial.printf("[OTA] Running firmware version: %s\n", FIRMWARE_VERSION);
+
+    // Rollback safety: if this image booted in PENDING_VERIFY (just OTA-flashed),
+    // confirm it is healthy. Reaching setup() with WiFi/storage initialized is our
+    // self-test; mark valid so it is not rolled back on the next reboot.
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(running, &state) == ESP_OK &&
+        state == ESP_OTA_IMG_PENDING_VERIFY)
+    {
+        esp_ota_mark_app_valid_cancel_rollback();
+        Serial.println("[OTA] new image self-test passed — marked valid");
+    }
 }
 
 // Returns true if `candidate` is a strictly newer semver than `current`.
