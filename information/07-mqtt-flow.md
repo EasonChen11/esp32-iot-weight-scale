@@ -22,7 +22,7 @@ ESP32                              PC (Docker)
 initMQTT()
     │
     ▼
-mqttClient.setServer("YOUR_AP_PASS", 1884)
+mqttClient.setServer("192.168.x.x", 1884)
 Serial: 印出 broker 地址和 topic 列表
 ```
 

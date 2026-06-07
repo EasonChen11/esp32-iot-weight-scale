@@ -22,7 +22,7 @@
     │              ┌───────┴───────┐
     │              ▼               ▼
     │         AP 立即啟動      STA 嘗試連線
-    │         SSID: ESP32_    YOUR_AP_PASS
+    │         SSID: ESP32_    YOUR_WIFI_SSID
     │         Weight_Scale    最多等 15 秒
     │         ✓ 一定成功       │
     │              │      ┌───┴───┐

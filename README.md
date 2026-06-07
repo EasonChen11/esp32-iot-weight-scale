@@ -136,7 +136,7 @@ When dev mode flips, any open dashboard tab auto-reloads within ~1 s (via `/tick
 
 ## PC Dashboard (Docker)
 
-Requires Docker, `MQTT_ENABLED true`, and PC at `YOUR_AP_PASS` on the same network.
+Requires Docker, `MQTT_ENABLED true`, and PC at `192.168.x.x` on the same network.
 
 ```bash
 docker compose -f docker/docker-compose.mqtt.yml up -d
