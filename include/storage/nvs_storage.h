@@ -16,6 +16,12 @@ bool getStaCredentials(String &ssidOut, String &passOut);
 bool hasStoredCredentials();
 void clearStaCredentials();
 
+// Google Sheets config storage (namespace "sheets_cfg", keys "url" "token")
+void saveSheetsConfig(const String &url, const String &token);
+bool getSheetsConfig(String &urlOut, String &tokenOut);  // true only if BOTH stored & non-empty
+bool hasSheetsConfig();
+void clearSheetsConfig();
+
 // Scale factor storage (namespace "scale_data", keys "scale1" "scale2")
 void  saveScaleFactor1(float factor);
 float getScaleFactor1();

@@ -1,5 +1,8 @@
 #include "dev_mode.h"
 #if DEV_MODE_ENABLED
+#if GOOGLE_SHEETS_ENABLED
+#include "storage/nvs_storage.h"
+#endif
 
 static bool g_devMode = false;
 
@@ -34,10 +37,40 @@ void handleSerialModeCommand()
                     Serial.printf("[Mode] Current: %s\n",
                                   isDevMode() ? "DEVELOPER" : "USER");
                 }
+#if GOOGLE_SHEETS_ENABLED
+                else if (buf.startsWith("sheets-set ")) {
+                    // Format: sheets-set <url> <token>
+                    String rest = buf.substring(11);
+                    rest.trim();
+                    int sp = rest.indexOf(' ');
+                    String url = (sp > 0) ? rest.substring(0, sp) : "";
+                    String token = (sp > 0) ? rest.substring(sp + 1) : "";
+                    url.trim();
+                    token.trim();
+                    if (url.length() == 0 || token.length() == 0) {
+                        Serial.println("[GSheets] usage: sheets-set <url> <token>");
+                    } else {
+                        saveSheetsConfig(url, token);
+                    }
+                }
+                else if (buf == "sheets-status") {
+                    String url, token;
+                    if (getSheetsConfig(url, token)) {
+                        // Token shown masked (length only) to keep it out of logs.
+                        Serial.printf("[GSheets] NVS config: url=%s token=<%d chars>\n",
+                                      url.c_str(), (int)token.length());
+                    } else {
+                        Serial.println("[GSheets] no NVS config — using compile-time URL/token");
+                    }
+                }
+                else if (buf == "sheets-clear") {
+                    clearSheetsConfig();
+                }
+#endif
                 // Unknown commands silently ignored.
             }
             buf = "";
-        } else if (buf.length() < 32) {
+        } else if (buf.length() < 300) {
             buf += c;
         }
         // overflow chars are dropped (next newline resets the buffer)

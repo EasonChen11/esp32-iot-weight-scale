@@ -107,7 +107,7 @@ All modules can be toggled independently in `config.h`:
 Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_SHEETS_ENABLED` all require `WIFI_ENABLED`.
 `WIFI_CONFIG_ENABLED` requires `WIFI_ENABLED` and `WEB_SERVER_ENABLED`, and adds a heartbeat status indicator to the main dashboard with a runtime WiFi configuration subpage at `/network`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
-`GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL **and** a matching shared token (`GOOGLE_SHEETS_URL` + `GOOGLE_SHEETS_TOKEN`) in `config_secrets.h`. See [`google_sheets/README.md`](google_sheets/README.md) for deployment.
+`GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL **and** a matching shared token. The device reads them **NVS-first** (provisioned over serial — see below), falling back to the compile-time `GOOGLE_SHEETS_URL` + `GOOGLE_SHEETS_TOKEN` in `config_secrets.h`. Because public/OTA builds ship with placeholder secrets, provision the real values over serial so they persist in NVS across OTA updates. See [`google_sheets/README.md`](google_sheets/README.md) for the Apps Script deployment.
 `OTA_ENABLED` requires `WIFI_ENABLED` and outbound internet. On boot/wake the device
 fetches `manifest.json` from the GitHub `latest` release, and if its `version` is newer
 than the compiled `FIRMWARE_VERSION` (set in `platformio.ini`), downloads `firmware.bin`,
@@ -153,6 +153,16 @@ Some destructive endpoints (`POST /factory-reset`, `POST /network/clear`) are hi
 | `dev-on` | Enable developer mode |
 | `dev-off` | Disable developer mode |
 | `dev-status` | Print current mode |
+
+**Google Sheets provisioning (serial, 115200 baud):** the Sheets URL/token are operator/service configuration, **not** exposed on any web page. Set them once over USB serial; they are stored in NVS and survive reboots and OTA updates.
+
+| Command | Effect |
+|---|---|
+| `sheets-set <url> <token>` | Save the Apps Script URL + shared token to NVS |
+| `sheets-status` | Show whether NVS config exists (token shown masked) |
+| `sheets-clear` | Erase the NVS config; revert to the compile-time fallback |
+
+> Requires `DEV_MODE_ENABLED` (default on) so the serial dispatcher is active. The token is never echoed in plaintext. For initial provisioning, build with `DEV_MODE_ENABLED true`.
 
 When dev mode flips, any open dashboard tab auto-reloads within ~1 s (via `/tick` polling) so the developer buttons appear or disappear automatically.
 
