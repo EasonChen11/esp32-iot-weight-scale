@@ -11,8 +11,27 @@ permissions:
 
 jobs:
   build:
-    name: Build firmware (pio run)
+    name: Build (${{ matrix.name }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Baseline — mirrors the real config.h defaults
+          - name: default
+            flags: ""
+          # Run without physical HX711 hardware
+          - name: simulate-sensor
+            flags: "-DSIMULATE_SENSOR=true"
+          # Optional radios/displays turned on
+          - name: mqtt-oled-on
+            flags: "-DMQTT_ENABLED=true -DOLED_ENABLED=true"
+          # Strip optional subsystems (catches #if guard gaps)
+          - name: minimal
+            flags: "-DMQTT_ENABLED=false -DGOOGLE_SHEETS_ENABLED=false -DOLED_ENABLED=false -DAUTO_LOGGER_ENABLED=false"
+          # Fully offline: no WiFi → every WiFi-dependent subsystem must compile out
+          - name: offline
+            flags: "-DWIFI_ENABLED=false -DWEB_SERVER_ENABLED=false -DMQTT_ENABLED=false -DNTP_ENABLED=false -DGOOGLE_SHEETS_ENABLED=false -DWIFI_CONFIG_ENABLED=false"
 
     steps:
       - name: Checkout code
@@ -40,5 +59,38 @@ jobs:
       - name: Provide placeholder secrets
         run: cp include/config_secrets.h.example include/config_secrets.h
 
-      - name: Build firmware
+      - name: Build firmware (${{ matrix.name }})
+        env:
+          PLATFORMIO_BUILD_FLAGS: ${{ matrix.flags }}
         run: pio run
+
+  filesystem:
+    name: Build LittleFS image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache PlatformIO & pip
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: ${{ runner.os }}-pio-${{ hashFiles('platformio.ini') }}
+          restore-keys: |
+            ${{ runner.os }}-pio-
+
+      - name: Install PlatformIO
+        run: pip install --upgrade platformio
+
+      - name: Provide placeholder secrets
+        run: cp include/config_secrets.h.example include/config_secrets.h
+
+      - name: Build filesystem image
+        run: pio run -t buildfs
