@@ -158,3 +158,47 @@ bool hasScaleFactor2()
   prefs.end();
   return has;
 }
+
+void saveSheetsConfig(const String &url, const String &token)
+{
+  Preferences prefs;
+  prefs.begin("sheets_cfg", false);
+  prefs.putString("url", url);
+  prefs.putString("token", token);
+  prefs.end();
+  // Never log the token.
+  Serial.println("[Storage] Google Sheets config saved");
+}
+
+bool getSheetsConfig(String &urlOut, String &tokenOut)
+{
+  Preferences prefs;
+  prefs.begin("sheets_cfg", true);
+  urlOut = prefs.getString("url", "");
+  tokenOut = prefs.getString("token", "");
+  prefs.end();
+  return urlOut.length() > 0 && tokenOut.length() > 0;
+}
+
+bool hasSheetsConfig()
+{
+  Preferences prefs;
+  prefs.begin("sheets_cfg", true);
+  bool has = prefs.isKey("url") && prefs.isKey("token");
+  if (has) {
+    has = prefs.getString("url", "").length() > 0 &&
+          prefs.getString("token", "").length() > 0;
+  }
+  prefs.end();
+  return has;
+}
+
+void clearSheetsConfig()
+{
+  Preferences prefs;
+  prefs.begin("sheets_cfg", false);
+  prefs.remove("url");
+  prefs.remove("token");
+  prefs.end();
+  Serial.println("[Storage] Google Sheets config cleared");
+}
