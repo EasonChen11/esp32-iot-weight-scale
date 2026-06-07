@@ -151,7 +151,7 @@ static bool downloadAndApply(const OtaManifest &m)
 
     WiFiClient *stream = http.getStreamPtr();
     uint8_t buf[1024];
-    size_t total_s = (size_t)total;
+    auto total_s = (size_t)total;
     size_t written = 0;
     uint32_t lastDataMs = millis();
     while (http.connected() && written < total_s)
