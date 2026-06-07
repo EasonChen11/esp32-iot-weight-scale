@@ -14,5 +14,3 @@ docker/mosquitto/log/
 
 CLAUDE.md
 .claudeignore
-.github/
-!.github/workflows/sync-wiki.yml
