@@ -13,6 +13,9 @@
 #if NTP_ENABLED
 #include "wifi_manager.h"
 #endif
+#if OTA_ENABLED
+#include "ota_manager.h"
+#endif
 
 static unsigned long bootTimeMs = 0;
 static bool sleepTriggered = false;
@@ -51,6 +54,10 @@ void initDeepSleep()
 void handleDeepSleep()
 {
     if (sleepTriggered) return;
+#if OTA_ENABLED
+    // Never sleep mid-update — the awake timer must not cut off an OTA flash.
+    if (isOtaInProgress()) return;
+#endif
     if (millis() - bootTimeMs < AWAKE_DURATION_MS) return;
 
     // Awake period expired — prepare to sleep
