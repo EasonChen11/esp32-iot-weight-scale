@@ -153,7 +153,7 @@ git tag v1.2.0
 git push github v1.2.0
 ```
 
-`release.yml` 在收到 `v*.*.*` tag 後會：跑完整 build matrix（5 種組態）+ cppcheck 驗證 → 驗證 tag 版號與 `FIRMWARE_VERSION` 一致 → `pio run` → 用 `scripts/make_manifest.py` 產生 `manifest.json` → 建立 GitHub Release 並附上 `firmware.bin` + `manifest.json`。最新的 release 會成為 **latest**，正是裝置那個永久 OTA URL 指向的位置，所以版本之間不需要改任何 URL。
+`release.yml` 在收到 `v*.*.*` tag 後會：跑完整 build matrix（5 種組態）+ cppcheck 驗證 → 驗證 tag 版號與 `FIRMWARE_VERSION` 一致 → **用 `scripts/update_ca_bundle.sh` 從 curl.se 抓最新 Mozilla 根憑證重新產生 `cert/x509_crt_bundle.bin`**（每次發版自動更新憑證，免手動維護；下載失敗會保留 committed bundle、不擋發版）→ `pio run` → 用 `scripts/make_manifest.py` 產生 `manifest.json` → 建立 GitHub Release 並附上 `firmware.bin` + `manifest.json`。最新的 release 會成為 **latest**，正是裝置那個永久 OTA URL 指向的位置，所以版本之間不需要改任何 URL。
 
 > **手動 fallback**（無 CI）：`pio run` → `python scripts/make_manifest.py <version> .pio/build/esp32dev/firmware.bin` → `gh release create v<version> .pio/build/esp32dev/firmware.bin .pio/build/esp32dev/manifest.json --generate-notes`。release 必須標記為 "latest"。
 
@@ -164,8 +164,10 @@ git push github v1.2.0
 | `include/ota_manager.h` | 對外 API（`initOTA`、`checkOtaUpdate`、`isOtaInProgress`） |
 | `src/ota_manager.cpp` | HTTPS manifest 抓取、semver 比對、下載 + SHA256 + 寫入邏輯 |
 | `partitions.csv` | 自訂雙 OTA 分區表 |
-| `cert/x509_crt_bundle.bin` | 嵌入 flash 的 Mozilla CA bundle，供 HTTPS 驗證 |
+| `cert/x509_crt_bundle.bin` | 嵌入 flash 的 Mozilla CA bundle，供 HTTPS 驗證（發版時自動刷新） |
 | `scripts/make_manifest.py` | 從建置出的 binary 產生 `manifest.json`（version、URL、sha256） |
+| `scripts/update_ca_bundle.sh` | 從 curl.se 抓最新 Mozilla 根憑證重產 CA bundle（CI 發版時呼叫） |
+| `scripts/gen_crt_bundle.py` | esp-idf 的憑證轉換工具（Apache-2.0，vendored），把 PEM 轉成 esp_crt_bundle 格式 |
 | `include/config.h` | `OTA_ENABLED`、`OTA_MANIFEST_URL`、`OTA_HTTP_TIMEOUT_MS` |
 | `platformio.ini` | `-DFIRMWARE_VERSION` build flag；`board_build.embed_files`；`board_build.partitions` |
 | `.github/workflows/release.yml` | tag 驅動的發佈 workflow（matrix + lint 自我驗證後發 Release） |

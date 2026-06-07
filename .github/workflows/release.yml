@@ -144,6 +144,14 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      # Embed fresh Mozilla root CAs in every release so the HTTPS trust store never
+      # silently goes stale — no manual cert maintenance. Falls back to the committed
+      # bundle on a network hiccup (the script exits 0), so this never blocks a release.
+      - name: Refresh CA bundle from latest Mozilla roots
+        run: |
+          pip install cryptography
+          bash scripts/update_ca_bundle.sh
+
       # Ships the default config (no flags) — that is the binary devices run.
       - name: Build firmware
         run: pio run
