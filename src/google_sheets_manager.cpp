@@ -88,6 +88,7 @@ String triggerGoogleSheetsSync()
     Serial.printf("[GSheets] Syncing %d records...\n", unsyncedArr.size());
 
     JsonDocument postDoc;
+    postDoc["token"] = GOOGLE_SHEETS_TOKEN; // shared secret validated by the GAS receiver
     JsonArray records = postDoc["records"].to<JsonArray>();
     // Send oldest first (flash stores newest first) so GAS appends in chronological order
     for (int i = unsyncedArr.size() - 1; i >= 0; i--)

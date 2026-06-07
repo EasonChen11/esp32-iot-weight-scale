@@ -106,7 +106,7 @@ All modules can be toggled independently in `config.h`:
 Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_SHEETS_ENABLED` all require `WIFI_ENABLED`.
 `WIFI_CONFIG_ENABLED` requires `WIFI_ENABLED` and `WEB_SERVER_ENABLED`, and adds a heartbeat status indicator to the main dashboard with a runtime WiFi configuration subpage at `/network`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
-`GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL in `config_secrets.h`.
+`GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL **and** a matching shared token (`GOOGLE_SHEETS_URL` + `GOOGLE_SHEETS_TOKEN`) in `config_secrets.h`. See [`google_sheets/README.md`](google_sheets/README.md) for deployment.
 
 ### Developer Mode
 

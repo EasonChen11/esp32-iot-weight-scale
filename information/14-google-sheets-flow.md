@@ -45,7 +45,7 @@ ESP32 (LittleFS)  ──HTTPS POST──▶  Google Apps Script  ──▶  Goog
 Google Apps Script returns HTTP 302 redirect after processing POST data. The redirect URL must be followed with **GET** (not POST) to retrieve the JSON response.
 
 ### Two-Step Flow
-1. **POST** `{"records": [...]}` to GAS exec URL → receives **302** with `Location` header
+1. **POST** `{"token": "...", "records": [...]}` to GAS exec URL → receives **302** with `Location` header
 2. **GET** the redirect URL → receives `{"success": true, "received_ids": [1,2,3], "count": 3}`
 
 ### Why Two Steps?
@@ -55,7 +55,7 @@ GAS architecture processes the POST body and writes to the sheet, then redirects
 
 **POST body:**
 ```json
-{"records": [{"id": 1, "date": "2026-03-30", "time": "14:30:00", "sensor1": "25.300", "sensor2": "22.100"}]}
+{"token": "<shared secret>", "records": [{"id": 1, "date": "2026-03-30", "time": "14:30:00", "sensor1": "25.300", "sensor2": "22.100"}]}
 ```
 
 **Response:**
@@ -73,6 +73,7 @@ GAS architecture processes the POST body and writes to the sheet, then redirects
 |---------|----------|-------|
 | Feature switch | `config.h` | `#define GOOGLE_SHEETS_ENABLED true` |
 | GAS URL | `config_secrets.h` | `const char *const GOOGLE_SHEETS_URL = "https://..."` |
+| Shared token | `config_secrets.h` | `const char *const GOOGLE_SHEETS_TOKEN = "..."` (must match `SHEETS_TOKEN` in GAS) |
 | Max records | `config.h` | `MAX_RECORDS = 50` |
 
 ## Error Handling

@@ -7,10 +7,18 @@
                                                                                                                         
   // ---- 設定 ----                                                                                                     
   const SHEET_NAME = "WeightData";  // 試算表分頁名稱
+  // 必須與韌體 config_secrets.h 的 GOOGLE_SHEETS_TOKEN 完全相同
+  const SHEETS_TOKEN = "YOUR_SHEETS_TOKEN";
                                                                                                                         
   function doPost(e) {
     try {                                                                                                               
       const payload = JSON.parse(e.postData.contents);
+
+      // 驗證共享 token：不符就拒絕，避免任何知道 URL 的人寫入
+      if (payload.token !== SHEETS_TOKEN) {
+        return jsonResponse({ success: false, error: "unauthorized" });
+      }
+
       const records = payload.records; // 陣列                                                                          
    
       if (!records || !Array.isArray(records) || records.length === 0) {                                                
@@ -102,6 +110,7 @@
     const mockEvent = {
       postData: {
         contents: JSON.stringify({
+          token: SHEETS_TOKEN,
           records: [                                                                                                    
             { id: 1, date: "2026-03-30", time: "14:30:00", sensor1: 25.3, sensor2: 22.1 },
             { id: 2, date: "2026-03-30", time: "14:35:00", sensor1: 25.5, sensor2: 22.0 }                               

@@ -10,13 +10,16 @@ Google Apps Script (GAS) that receives batched weight records from the ESP32 and
 
 1. Open the target Google Sheet → Extensions → Apps Script.
 2. Replace the default `Code.gs` contents with `google_sheet_script.js`.
-3. Deploy → New deployment → Type **Web app** → Execute as **Me** → Who has access **Anyone**.
-4. Copy the deployment URL (`https://script.google.com/macros/s/.../exec`).
-5. Paste it into `include/config_secrets.h` as `GOOGLE_SHEETS_URL`.
+3. Set `SHEETS_TOKEN` in the script to a secret of your choice — it **must match** `GOOGLE_SHEETS_TOKEN` in `include/config_secrets.h`. Requests with a wrong/missing token are rejected with `{"success":false,"error":"unauthorized"}`.
+4. Deploy → New deployment → Type **Web app** → Execute as **Me** → Who has access **Anyone**.
+5. Copy the deployment URL (`https://script.google.com/macros/s/.../exec`).
+6. Paste it into `include/config_secrets.h` as `GOOGLE_SHEETS_URL`.
+
+> Updating an existing deployment later: **Deploy → Manage deployments → edit (pencil) → Version: New version**. This keeps the same `/exec` URL, so you don't need to change `GOOGLE_SHEETS_URL`.
 
 ## Behaviour
 
-- POST body: `{"records":[{"id":..,"date":..,"time":..,"sensor1":..,"sensor2":..}, ...]}`
+- POST body: `{"token":"...","records":[{"id":..,"date":..,"time":..,"sensor1":..,"sensor2":..}, ...]}`
 - Response: `{"success":true,"received_ids":[...],"count":N}`
 - Dedup by ID — duplicate IDs are silently acked and skipped (see warning below).
 - Spreadsheet column F (`Total`) is computed by formula `=D+E`.
