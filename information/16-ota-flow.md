@@ -1,10 +1,10 @@
-# OTA (Over-the-Air) Firmware Update Flow
+# OTA 韌體更新流程 (ota_manager)
 
-## Overview
+## 概觀
 
-The OTA module (`ota_manager`) pulls firmware updates automatically from GitHub Releases over HTTPS. Each boot/wake cycle, after WiFi connects, the ESP32 fetches a small `manifest.json`, compares the version against the running firmware, and — if a newer version exists — streams the binary, verifies its SHA-256, writes it to the inactive OTA partition, and reboots into the new image. If anything goes wrong (network error, truncated download, hash mismatch) the update is aborted and the current firmware continues running without any intervention needed.
+OTA 模組（`ota_manager`）透過 HTTPS 自動從 GitHub Releases 拉取韌體更新。每次開機/喚醒、WiFi 連上之後，ESP32 會抓一個很小的 `manifest.json`，把裡面的版本和目前執行中的韌體比對；若有更新版，就串流下載韌體、驗證 SHA-256、寫入「非執行中」的 OTA 分區，再重開機切到新韌體。中途若出任何問題（網路錯誤、下載截斷、雜湊不符），更新會中止、目前韌體照常運行，不需要任何人介入。
 
-## Architecture
+## 架構
 
 ```
 ESP32 (Core 0 — WebAndTasksCode)
@@ -39,7 +39,7 @@ GitHub Releases  ──  manifest.json  ──► fetchManifest()
                    (rollback cancelled)
 ```
 
-## checkOtaUpdate() Step-by-Step Flow
+## checkOtaUpdate() 逐步流程
 
 ```
 WebAndTasksCode (Core 0)
@@ -79,38 +79,38 @@ isNewerVersion(FIRMWARE_VERSION, manifest.version)?
              delay(500) → ESP.restart()
 ```
 
-## Rollback Safety (initOTA)
+## Rollback 防護 (initOTA)
 
-`initOTA()` is called at the end of `setup()` (after WiFi, storage, and sensor init). If the running partition state is `ESP_OTA_IMG_PENDING_VERIFY` — meaning the device just booted into a freshly OTA-flashed image for the first time — it calls `esp_ota_mark_app_valid_cancel_rollback()`. Reaching `setup()` with all subsystems initialized is the self-test; a pass marks the image valid. If the firmware had panicked or failed to boot before reaching that call, the ESP-IDF bootloader would automatically roll back to the previous working image on the next reboot.
+`initOTA()` 在 `setup()` 結尾被呼叫（在 WiFi、儲存、感測器初始化之後）。若目前執行分區的狀態是 `ESP_OTA_IMG_PENDING_VERIFY`——代表裝置剛 OTA 燒入新韌體、是第一次開機——就呼叫 `esp_ota_mark_app_valid_cancel_rollback()`。能順利跑到 `setup()` 且所有子系統都初始化完成，就是自我檢查；通過即把這個韌體標記為「有效」。若韌體在跑到這行之前就 panic 或開不起來，ESP-IDF bootloader 會在下次重開機時自動回滾到上一個可用的韌體。
 
-## Configuration
+## 設定
 
-| Setting | Location | Value |
-|---------|----------|-------|
-| Feature switch | `config.h` | `#define OTA_ENABLED true` |
+| 設定項 | 位置 | 值 |
+|--------|------|-----|
+| 功能開關 | `config.h` | `#define OTA_ENABLED true` |
 | Manifest URL | `config.h` | `OTA_MANIFEST_URL` = `https://github.com/EasonChen11/esp32-iot-weight-scale/releases/latest/download/manifest.json` |
-| HTTP timeout | `config.h` | `OTA_HTTP_TIMEOUT_MS` = 15000 ms |
-| Firmware version | `platformio.ini` | `-DFIRMWARE_VERSION=\"1.1.0\"` (build flag) |
-| CA bundle | `cert/x509_crt_bundle.bin` | Mozilla root CAs, embedded via `board_build.embed_files` |
-| Partition layout | `partitions.csv` | Custom dual-OTA (`app0`/`app1` = 0x190000 each) |
+| HTTP 逾時 | `config.h` | `OTA_HTTP_TIMEOUT_MS` = 15000 ms |
+| 韌體版號 | `platformio.ini` | `-DFIRMWARE_VERSION=\"1.1.0\"`（build flag） |
+| CA bundle | `cert/x509_crt_bundle.bin` | Mozilla 根憑證，透過 `board_build.embed_files` 嵌入韌體 |
+| 分區配置 | `partitions.csv` | 自訂雙 OTA（`app0`/`app1` 各 0x190000） |
 
-## Error Handling
+## 錯誤處理
 
-| Scenario | Behaviour |
-|----------|-----------|
-| No WiFi / offline | `otaChecked` guard never fires — check skipped; all sensors and web server continue normally |
-| HTTP error on manifest | Logged (`[OTA] manifest HTTP <code>`); update aborted; retried next boot |
-| JSON parse error / missing fields | Logged; update aborted; current firmware continues |
-| Manifest version not newer | Logged ("already up to date"); no-op |
-| HTTP error on firmware download | Logged; `Update.abort()`; retried next boot |
-| Download stalled (no data for 15 s) | Loop breaks; truncation check triggers `Update.abort()` |
-| Truncated download (written != total) | `Update.abort()`; flash untouched; retried next boot |
-| SHA-256 mismatch | `Update.abort()`; flash untouched; device not bricked; retried next boot |
-| New image fails to boot (panic/hang before `initOTA()`) | ESP-IDF bootloader auto-rolls back to previous valid image on next reboot |
+| 情境 | 行為 |
+|------|------|
+| 無 WiFi / 離線 | `otaChecked` guard 不會觸發——跳過檢查；所有感測器與 Web 伺服器照常運作 |
+| Manifest HTTP 錯誤 | 記錄（`[OTA] manifest HTTP <code>`）；中止更新；下次開機重試 |
+| JSON 解析錯誤 / 欄位缺失 | 記錄；中止更新；目前韌體繼續執行 |
+| Manifest 版本不比較新 | 記錄（"already up to date"）；不動作 |
+| 韌體下載 HTTP 錯誤 | 記錄；`Update.abort()`；下次開機重試 |
+| 下載停滯（15 秒無資料） | 迴圈中斷；截斷檢查觸發 `Update.abort()` |
+| 下載截斷（written != total） | `Update.abort()`；flash 不動；下次開機重試 |
+| SHA-256 不符 | `Update.abort()`；flash 不動；裝置不會變磚；下次開機重試 |
+| 新韌體開不起來（跑到 `initOTA()` 前就 panic/hang） | ESP-IDF bootloader 下次重開機自動回滾到上一個有效韌體 |
 
-## Partition Layout
+## 分區配置
 
-Custom `partitions.csv` replaces the default single-app layout to enable dual OTA slots:
+自訂的 `partitions.csv` 取代預設的單 app 配置，以啟用雙 OTA slot：
 
 ```
 nvs       data  nvs      0x9000   0x5000
@@ -121,43 +121,51 @@ spiffs    data  spiffs   0x330000 0xC0000    (768 KB — LittleFS)
 coredump  data  coredump 0x3F0000 0x10000
 ```
 
-The 63 KB Mozilla CA bundle is embedded in flash (counted inside the app slot). Firmware currently uses ~73% of one app slot.
+63 KB 的 Mozilla CA bundle 嵌入在 flash（計入 app slot 內）。目前韌體用掉約一個 app slot 的 73%。
 
-### One-Time Partition Migration Warning
+### 一次性分區遷移警告
 
-Switching from the default partition layout to this custom layout **requires a full USB erase + re-flash**:
+從預設分區配置切換到這個自訂配置，**需要一次完整的 USB erase + 重燒**：
 
 ```bash
 pio run --target erase
-pio run --target uploadfs   # re-flash LittleFS
-pio run --target upload     # flash firmware
+pio run --target uploadfs   # 重燒 LittleFS
+pio run --target upload     # 燒韌體
 ```
 
-This wipes NVS (calibration offsets and schedules) and all LittleFS records. After the first OTA-capable USB flash:
+這會清掉 NVS（校正 offset 與排程）以及所有 LittleFS 紀錄。第一次燒入支援 OTA 的韌體後：
 
-1. Re-enter calibration offsets via the web UI.
-2. Re-add wake schedules.
-3. Records: already synced to Google Sheets; the flash copy is lost but the sheet is the source of truth.
+1. 透過 Web UI 重新輸入校正 offset。
+2. 重新加入喚醒排程。
+3. 紀錄：已同步到 Google Sheets；flash 上的副本會遺失，但試算表才是真實來源（source of truth）。
 
-Subsequent updates are OTA — no USB cable needed.
+之後的更新都走 OTA——不再需要 USB 線。
 
-## Release Process (Maintainer)
+## 發佈流程（維護者）
 
-1. Bump `-DFIRMWARE_VERSION` in `platformio.ini`.
-2. Build: `pio run`
-3. Generate manifest: `python scripts/make_manifest.py <version> .pio/build/esp32dev/firmware.bin`
-4. Create a GitHub Release marked **"latest"** and attach `firmware.bin` and `manifest.json` as assets.
+發版採 **tag 驅動、CI 自動化**（見 `.github/workflows/release.yml`）。版號的單一來源是 `platformio.ini` 的 `FIRMWARE_VERSION`，tag 必須與它一致。
 
-The `OTA_MANIFEST_URL` always resolves to the **latest** release assets via GitHub's redirect, so no URL change is needed between releases.
+```bash
+# 1. 改 platformio.ini：-DFIRMWARE_VERSION=\"1.2.0\"
+git commit -am "release: v1.2.0"
+# 2. 打 tag 推上去，CI 全自動
+git tag v1.2.0
+git push github v1.2.0
+```
 
-## Files
+`release.yml` 在收到 `v*.*.*` tag 後會：跑完整 build matrix（5 種組態）+ cppcheck 驗證 → 驗證 tag 版號與 `FIRMWARE_VERSION` 一致 → `pio run` → 用 `scripts/make_manifest.py` 產生 `manifest.json` → 建立 GitHub Release 並附上 `firmware.bin` + `manifest.json`。最新的 release 會成為 **latest**，正是裝置那個永久 OTA URL 指向的位置，所以版本之間不需要改任何 URL。
 
-| File | Role |
+> **手動 fallback**（無 CI）：`pio run` → `python scripts/make_manifest.py <version> .pio/build/esp32dev/firmware.bin` → `gh release create v<version> .pio/build/esp32dev/firmware.bin .pio/build/esp32dev/manifest.json --generate-notes`。release 必須標記為 "latest"。
+
+## 相關檔案
+
+| 檔案 | 角色 |
 |------|------|
-| `include/ota_manager.h` | Public API (`initOTA`, `checkOtaUpdate`, `isOtaInProgress`) |
-| `src/ota_manager.cpp` | HTTPS manifest fetch, semver compare, download+SHA256+write logic |
-| `partitions.csv` | Custom dual-OTA partition table |
-| `cert/x509_crt_bundle.bin` | Mozilla CA bundle embedded in flash for HTTPS verification |
-| `scripts/make_manifest.py` | Generates `manifest.json` (version, URL, sha256) from a built binary |
-| `include/config.h` | `OTA_ENABLED`, `OTA_MANIFEST_URL`, `OTA_HTTP_TIMEOUT_MS` |
-| `platformio.ini` | `-DFIRMWARE_VERSION` build flag; `board_build.embed_files`; `board_build.partitions` |
+| `include/ota_manager.h` | 對外 API（`initOTA`、`checkOtaUpdate`、`isOtaInProgress`） |
+| `src/ota_manager.cpp` | HTTPS manifest 抓取、semver 比對、下載 + SHA256 + 寫入邏輯 |
+| `partitions.csv` | 自訂雙 OTA 分區表 |
+| `cert/x509_crt_bundle.bin` | 嵌入 flash 的 Mozilla CA bundle，供 HTTPS 驗證 |
+| `scripts/make_manifest.py` | 從建置出的 binary 產生 `manifest.json`（version、URL、sha256） |
+| `include/config.h` | `OTA_ENABLED`、`OTA_MANIFEST_URL`、`OTA_HTTP_TIMEOUT_MS` |
+| `platformio.ini` | `-DFIRMWARE_VERSION` build flag；`board_build.embed_files`；`board_build.partitions` |
+| `.github/workflows/release.yml` | tag 驅動的發佈 workflow（matrix + lint 自我驗證後發 Release） |

@@ -1,17 +1,17 @@
-# Google Sheets Sync Flow
+# Google Sheets 同步流程 (google_sheets_manager)
 
-## Overview
+## 概觀
 
-The Google Sheets module (`google_sheets_manager`) syncs weight records from LittleFS flash storage to a Google Sheets spreadsheet via a Google Apps Script (GAS) web app endpoint. Each record is tracked with a `synced` flag to ensure exactly-once delivery.
+Google Sheets 模組（`google_sheets_manager`）透過 Google Apps Script (GAS) web app 端點，把 LittleFS flash 儲存裡的重量紀錄同步到 Google 試算表。每筆紀錄都用 `synced` 旗標追蹤，以確保 exactly-once 投遞（不重複、不漏）。
 
-## Architecture
+## 架構
 
 ```
 ESP32 (LittleFS)  ──HTTPS POST──▶  Google Apps Script  ──▶  Google Sheets
                   ◀──JSON response──  (returns received_ids)
 ```
 
-## Record Format (LittleFS JSON)
+## 紀錄格式 (LittleFS JSON)
 
 ```json
 {
@@ -24,78 +24,82 @@ ESP32 (LittleFS)  ──HTTPS POST──▶  Google Apps Script  ──▶  Goog
 }
 ```
 
-- `id`: Monotonic counter stored in NVS (persists across power cycles)
-- `synced`: Set to `true` only after GAS confirms receipt
+- `id`：存在 NVS 的單調遞增計數器（跨電源週期保留）
+- `synced`：只有在 GAS 確認收到後才設為 `true`
 
-## Sync Trigger
+## 同步觸發
 
-### Automatic (once per boot)
-1. Auto-logger saves startup record after `STARTUP_RECORD_DELAY_MS` (10s)
-2. `handleGoogleSheetsSync()` detects `isStartupRecordDone() == true`
-3. Collects all records where `synced == false`
-4. POSTs batch to GAS endpoint
-5. Marks confirmed IDs as synced
+### 自動（每次開機一次）
 
-### Manual (web UI button)
-- "Sync Sheets" button calls `/sync-sheets` endpoint
-- Triggers `triggerGoogleSheetsSync()` which returns a status message
+1. Auto-logger 在 `STARTUP_RECORD_DELAY_MS`（10 秒）後存一筆開機紀錄
+2. `handleGoogleSheetsSync()` 偵測到 `isStartupRecordDone() == true`
+3. 收集所有 `synced == false` 的紀錄
+4. 批次 POST 到 GAS 端點
+5. 把已確認的 ID 標記為 synced
 
-## GAS Communication Protocol
+### 手動（Web UI 按鈕）
 
-Google Apps Script returns HTTP 302 redirect after processing POST data. The redirect URL must be followed with **GET** (not POST) to retrieve the JSON response.
+- 「Sync Sheets」按鈕呼叫 `/sync-sheets` 端點
+- 觸發 `triggerGoogleSheetsSync()`，回傳一段狀態訊息
 
-### Two-Step Flow
-1. **POST** `{"token": "...", "records": [...]}` to GAS exec URL → receives **302** with `Location` header
-2. **GET** the redirect URL → receives `{"success": true, "received_ids": [1,2,3], "count": 3}`
+## GAS 通訊協定
 
-### Why Two Steps?
-GAS architecture processes the POST body and writes to the sheet, then redirects to a `googleusercontent.com` echo endpoint that only accepts GET requests. Using `HTTPC_FORCE_FOLLOW_REDIRECTS` on the initial POST results in HTTP 400/405 errors because the redirect URL receives a POST instead of GET.
+Google Apps Script 處理完 POST 資料後會回傳 HTTP 302 重導。這個重導 URL 必須用 **GET**（不是 POST）去取，才能拿到 JSON 回應。
 
-## GAS Script Contract
+### 兩段式流程
 
-**POST body:**
+1. **POST** `{"token": "...", "records": [...]}` 到 GAS exec URL → 收到 **302** 含 `Location` header
+2. **GET** 該重導 URL → 收到 `{"success": true, "received_ids": [1,2,3], "count": 3}`
+
+### 為什麼要兩段？
+
+GAS 架構會先處理 POST body 並寫入試算表，然後重導到一個只接受 GET 的 `googleusercontent.com` echo 端點。若對最初的 POST 直接用 `HTTPC_FORCE_FOLLOW_REDIRECTS`，重導 URL 會收到 POST 而非 GET，導致 HTTP 400/405 錯誤。
+
+## GAS 腳本契約
+
+**POST body：**
 ```json
 {"token": "<shared secret>", "records": [{"id": 1, "date": "2026-03-30", "time": "14:30:00", "sensor1": "25.300", "sensor2": "22.100"}]}
 ```
 
-**Response:**
+**回應：**
 ```json
 {"success": true, "received_ids": [1], "count": 1}
 ```
 
-- GAS performs deduplication by ID (won't insert duplicate rows)
-- Only IDs listed in `received_ids` are marked synced on ESP32
-- Total weight is calculated in the spreadsheet (not sent by ESP32)
+- GAS 以 ID 去重（不會插入重複的列）
+- 只有列在 `received_ids` 裡的 ID 才會在 ESP32 上被標記為 synced
+- 總重量在試算表內計算（不由 ESP32 傳送）
 
-## Configuration
+## 設定
 
-| Setting | Location | Value |
-|---------|----------|-------|
-| Feature switch | `config.h` | `#define GOOGLE_SHEETS_ENABLED true` |
+| 設定項 | 位置 | 值 |
+|--------|------|-----|
+| 功能開關 | `config.h` | `#define GOOGLE_SHEETS_ENABLED true` |
 | GAS URL | `config_secrets.h` | `const char *const GOOGLE_SHEETS_URL = "https://..."` |
-| Shared token | `config_secrets.h` | `const char *const GOOGLE_SHEETS_TOKEN = "..."` (must match `SHEETS_TOKEN` in GAS) |
-| Max records | `config.h` | `MAX_RECORDS = 50` |
+| 共享 token | `config_secrets.h` | `const char *const GOOGLE_SHEETS_TOKEN = "..."`（必須與 GAS 內的 `SHEETS_TOKEN` 一致） |
+| 最大紀錄數 | `config.h` | `MAX_RECORDS = 200` |
 
-## Error Handling
+## 錯誤處理
 
-| Scenario | Behaviour |
-|----------|-----------|
-| No WiFi (AP mode only) | Sync skipped — records stay unsynced |
-| GAS returns partial success | Only confirmed IDs marked synced |
-| HTTP failure / timeout | Records remain unsynced, retried next boot |
-| Old record format (no `id` field) | Auto-migration: flash cleared on detection |
-| NTP failure | Records still saved using RTC fallback time |
-
-## NTP Callback Sync
-
-NTP uses `sntp_set_time_sync_notification_cb()` for reliable sync detection instead of polling `sntp_get_sync_status()`. This resolves an issue where the polling loop would exit prematurely on ESP32.
-
-## Files
-
-| File | Role |
+| 情境 | 行為 |
 |------|------|
-| `include/google_sheets_manager.h` | Public API |
-| `src/google_sheets_manager.cpp` | HTTPS POST logic, sync orchestration |
-| `src/storage/littlefs_storage.cpp` | Record CRUD with `synced` flag |
-| `src/storage/nvs_storage.cpp` | Monotonic ID counter |
-| `src/auto_logger.cpp` | Expanded record format (id, date, s1, s2) |
+| 無 WiFi（僅 AP 模式） | 跳過同步——紀錄維持未同步 |
+| GAS 回傳部分成功 | 只有已確認的 ID 被標記 synced |
+| HTTP 失敗 / 逾時 | 紀錄維持未同步，下次開機重試 |
+| 舊紀錄格式（無 `id` 欄位） | 自動遷移：偵測到即清空 flash |
+| NTP 失敗 | 紀錄仍會用 RTC fallback 時間存下 |
+
+## NTP Callback 同步
+
+NTP 用 `sntp_set_time_sync_notification_cb()` 來可靠地偵測同步，而非輪詢 `sntp_get_sync_status()`。這解決了 ESP32 上輪詢迴圈會過早結束的問題。
+
+## 相關檔案
+
+| 檔案 | 角色 |
+|------|------|
+| `include/google_sheets_manager.h` | 對外 API |
+| `src/google_sheets_manager.cpp` | HTTPS POST 邏輯、同步協調 |
+| `src/storage/littlefs_storage.cpp` | 帶 `synced` 旗標的紀錄 CRUD |
+| `src/storage/nvs_storage.cpp` | 單調遞增 ID 計數器 |
+| `src/auto_logger.cpp` | 擴充的紀錄格式（id, date, s1, s2） |
