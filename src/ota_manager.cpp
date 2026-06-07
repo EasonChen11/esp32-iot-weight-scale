@@ -140,6 +140,7 @@ static bool downloadAndApply(const OtaManifest &m)
     if (total <= 0 || !Update.begin((size_t)total))
     {
         Serial.printf("[OTA] Update.begin failed (size=%d): %s\n", total, Update.errorString());
+        Update.abort();
         http.end();
         return false;
     }
@@ -150,15 +151,27 @@ static bool downloadAndApply(const OtaManifest &m)
 
     WiFiClient *stream = http.getStreamPtr();
     uint8_t buf[1024];
-    int written = 0;
-    while (http.connected() && written < total)
+    size_t total_s = (size_t)total;
+    size_t written = 0;
+    uint32_t lastDataMs = millis();
+    while (http.connected() && written < total_s)
     {
         size_t avail = stream->available();
-        if (avail == 0) { delay(1); continue; }
-        int n = stream->readBytes(buf, avail > sizeof(buf) ? sizeof(buf) : avail);
-        if (n <= 0) break;
+        if (avail == 0)
+        {
+            // Guard against a hung connection burning the deep-sleep awake window.
+            if (millis() - lastDataMs > OTA_HTTP_TIMEOUT_MS)
+            {
+                Serial.println("[OTA] download stalled — timed out");
+                break;
+            }
+            delay(1);
+            continue;
+        }
+        size_t n = stream->readBytes(buf, avail > sizeof(buf) ? sizeof(buf) : avail);
+        if (n == 0) break;
         mbedtls_sha256_update(&sha, buf, n);
-        if (Update.write(buf, n) != (size_t)n)
+        if (Update.write(buf, n) != n)
         {
             Serial.printf("[OTA] Update.write failed: %s\n", Update.errorString());
             Update.abort();
@@ -167,12 +180,13 @@ static bool downloadAndApply(const OtaManifest &m)
             return false;
         }
         written += n;
+        lastDataMs = millis();
     }
     http.end();
 
-    if (written != total)
+    if (written != total_s)
     {
-        Serial.printf("[OTA] truncated: %d/%d bytes\n", written, total);
+        Serial.printf("[OTA] truncated: %d/%d bytes\n", (int)written, total);
         mbedtls_sha256_free(&sha);
         Update.abort();
         return false;
