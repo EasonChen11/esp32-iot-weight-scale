@@ -57,6 +57,11 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
+      # Gate the release on the same static-analysis bar as CI (pio-build.yml lint job).
+      # A failing step stops the job, so nothing gets published on a HIGH defect.
+      - name: Static analysis (cppcheck)
+        run: pio check --fail-on-defect=high
+
       - name: Build firmware
         run: pio run
 
