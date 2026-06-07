@@ -180,6 +180,8 @@ bool getSheetsConfig(String &urlOut, String &tokenOut)
   return urlOut.length() > 0 && tokenOut.length() > 0;
 }
 
+// Stricter than the WiFi hasStoredCredentials(): requires BOTH url and token
+// non-empty, since a token-less Sheets sync would be rejected by the GAS receiver.
 bool hasSheetsConfig()
 {
   Preferences prefs;

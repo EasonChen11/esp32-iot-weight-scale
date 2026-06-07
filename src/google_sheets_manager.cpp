@@ -15,7 +15,8 @@ static bool syncAttempted = false;
 void initGoogleSheets()
 {
     syncAttempted = false;
-    Serial.println("[GSheets] Service initialized. Waiting for startup record...");
+    Serial.printf("[GSheets] Service initialized (config source: %s). Waiting for startup record...\n",
+                  hasSheetsConfig() ? "NVS" : "compile-time fallback");
 }
 
 // POST to GAS, then GET the redirect URL to retrieve the JSON response

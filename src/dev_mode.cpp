@@ -70,7 +70,7 @@ void handleSerialModeCommand()
                 // Unknown commands silently ignored.
             }
             buf = "";
-        } else if (buf.length() < 200) {
+        } else if (buf.length() < 300) {
             buf += c;
         }
         // overflow chars are dropped (next newline resets the buffer)
