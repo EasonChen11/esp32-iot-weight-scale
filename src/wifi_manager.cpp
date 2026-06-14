@@ -104,9 +104,9 @@ void initWiFi()
 #endif
         Serial.printf("\n[WiFi] STA connected via compile-time! IP: %s\n",
                       WiFi.localIP().toString().c_str());
-#if MQTT_ENABLED
-        Serial.printf("[WiFi] MQTT broker: %s:%d\n", MQTT_BROKER_IP, MQTT_BROKER_PORT);
-#endif
+        // MQTT broker is logged authoritatively (with NVS/compile-time source)
+        // by initMQTT() — don't print the compile-time value here, it may be
+        // stale when the broker was NVS-provisioned.
         return;
     }
 
