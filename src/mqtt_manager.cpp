@@ -4,9 +4,13 @@
 #include <PubSubClient.h>
 #include "mqtt_manager.h"
 #include "sensor_manager.h"
+#include "storage/nvs_storage.h"
 
 static WiFiClient   wifiClient;
 static PubSubClient mqttClient(wifiClient);
+
+static String   g_brokerIp;
+static uint16_t g_brokerPort = 0;
 
 static unsigned long lastPublishMs      = 0;
 static unsigned long lastReconnectMs    = 0;
@@ -25,7 +29,7 @@ static void tryReconnectMQTT()
     }
     lastReconnectMs = now;
 
-    Serial.printf("[MQTT] Connecting to broker %s:%d ... ", MQTT_BROKER_IP, MQTT_BROKER_PORT);
+    Serial.printf("[MQTT] Connecting to broker %s:%u ... ", g_brokerIp.c_str(), g_brokerPort);
 
     if (mqttClient.connect(MQTT_CLIENT_ID))
     {
@@ -39,12 +43,26 @@ static void tryReconnectMQTT()
 }
 
 /*
-Initialize the MQTT client with the broker address/port from config.h.
+Initialize the MQTT client with the broker address/port.
+Source priority: NVS ("mqtt_cfg") > compile-time MQTT_BROKER_IP / MQTT_BROKER_PORT.
 */
 void initMQTT()
 {
-    mqttClient.setServer(MQTT_BROKER_IP, MQTT_BROKER_PORT);
-    Serial.printf("[MQTT] Configured broker: %s:%d\n", MQTT_BROKER_IP, MQTT_BROKER_PORT);
+    String nvsIp;
+    uint16_t nvsPort;
+    const char *src;
+    if (getMqttConfig(nvsIp, nvsPort)) {
+        g_brokerIp = nvsIp;
+        g_brokerPort = nvsPort;
+        src = "NVS";
+    } else {
+        g_brokerIp = MQTT_BROKER_IP;
+        g_brokerPort = (uint16_t)MQTT_BROKER_PORT;
+        src = "compile-time";
+    }
+    mqttClient.setServer(g_brokerIp.c_str(), g_brokerPort);
+    Serial.printf("[MQTT] Configured broker (source: %s): %s:%u\n",
+                  src, g_brokerIp.c_str(), g_brokerPort);
     Serial.printf("[MQTT] Topics: %s  %s  %s\n",
                   MQTT_TOPIC_SENSOR1, MQTT_TOPIC_SENSOR2, MQTT_TOPIC_TOTAL);
 }
