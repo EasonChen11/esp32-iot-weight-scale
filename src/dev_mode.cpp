@@ -74,7 +74,8 @@ void handleSerialModeCommand()
                     String pass = (sp > 0) ? rest.substring(sp + 1) : "";
                     ssid.trim();
                     pass.trim();
-                    if (ssid.length() == 0 || ssid.length() > 32 || pass.length() < 8 || pass.length() > 63) {
+                    if (ssid.length() == 0 || ssid.length() > 32 ||
+                        pass.length() < 8 || pass.length() > 63 || pass.indexOf(' ') >= 0) {
                         Serial.println("[WiFi] usage: ap-set <ssid> <pass>  (ssid 1-32 chars, pass 8-63 chars, no spaces)");
                     } else {
                         saveApConfig(ssid, pass);
