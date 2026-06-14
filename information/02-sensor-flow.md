@@ -65,9 +65,9 @@ updateSensor()
        └─ 真實模式：同 _doRead1 邏輯
        │
        ▼
-  cached_weight1 = 結果    ← 存入 volatile RAM
-  cached_weight2 = 結果    ← 同上
-  last_read_time = millis()
+  r1/r2 推入各自的 5 筆中位數緩衝（-1.0 未就緒則略過）
+  cached_weight1/2 = median1()/median2()    ← 中位數，存入 volatile RAM
+  （last_read_time 已在區塊開頭設定）
   Serial 輸出
 ```
 

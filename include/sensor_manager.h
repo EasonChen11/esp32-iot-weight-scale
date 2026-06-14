@@ -13,8 +13,8 @@ Parameters:
 void initSensor(long savedOffset1 = 0, long savedOffset2 = 0);
 
 /*
-Update cached weight values for both sensors at 500ms intervals.
-Call this continuously from loop().
+Update cached weight values for both sensors every SENSOR_READ_INTERVAL_MS
+(single read per sensor fed into a moving-median buffer). Call continuously from loop().
 */
 void updateSensor();
 
