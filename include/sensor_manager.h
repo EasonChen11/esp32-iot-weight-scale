@@ -35,6 +35,15 @@ Return sensor 2 cached weight in kg.
 float getCachedWeight2();
 
 /*
+Take a fresh, high-precision reading for the permanent record (NOT the live display).
+Reads LOG_SAMPLE_COUNT raw samples, drops LOG_TRIM_COUNT highest + lowest, and averages
+the rest (trimmed mean) — accurate and robust to occasional spikes. Each sample is guarded
+by wait_ready_timeout; if too few samples arrive it falls back to the cached value.
+*/
+float readLogWeight1();
+float readLogWeight2();
+
+/*
 Tare sensor 1 only (temporary, not persisted).
 */
 void tareSensor1();
