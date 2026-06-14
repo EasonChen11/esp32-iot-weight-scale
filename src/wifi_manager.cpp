@@ -40,7 +40,7 @@ static bool connectToStation(const char *ssid, const char *pass, unsigned long t
 Initialize WiFi in AP+STA mode so both interfaces are active simultaneously.
 
 Connection flow:
-  1. Start Soft-AP immediately (AP_WIFI_SSID / AP_WIFI_PASS).
+  1. Start Soft-AP (NVS ap_cfg if provisioned, else AP_WIFI_SSID / AP_WIFI_PASS).
      → Web server is reachable at the AP gateway IP (default 192.168.4.1)
        by any phone or device that connects to the ESP32 hotspot.
   2. If WIFI_CONFIG_ENABLED: try NVS-stored SSID/pass for WIFI_CONNECT_TIMEOUT_MS.
@@ -59,10 +59,20 @@ void initWiFi()
     // Run both AP and STA interfaces concurrently
     WiFi.mode(WIFI_AP_STA);
 
-    // ── AP interface (always on) ───────────────────────────────────────
-    WiFi.softAP(AP_WIFI_SSID, AP_WIFI_PASS);
-    Serial.printf("[WiFi] AP started: SSID='%s'  IP: %s\n",
-                  AP_WIFI_SSID, WiFi.softAPIP().toString().c_str());
+    // ── AP interface (always on) — NVS-provisioned creds take precedence ──
+    String apSsid, apPass;
+    bool apFromNvs = false;
+#if WIFI_CONFIG_ENABLED
+    apFromNvs = getApConfig(apSsid, apPass);
+#endif
+    if (!apFromNvs) {
+        apSsid = AP_WIFI_SSID;
+        apPass = AP_WIFI_PASS;
+    }
+    WiFi.softAP(apSsid.c_str(), apPass.c_str());
+    Serial.printf("[WiFi] AP started: SSID='%s' (source: %s)  IP: %s\n",
+                  apSsid.c_str(), apFromNvs ? "NVS" : "compile-time",
+                  WiFi.softAPIP().toString().c_str());
     Serial.printf("[WiFi] Web interface (AP): http://%s\n",
                   WiFi.softAPIP().toString().c_str());
 
@@ -94,9 +104,9 @@ void initWiFi()
 #endif
         Serial.printf("\n[WiFi] STA connected via compile-time! IP: %s\n",
                       WiFi.localIP().toString().c_str());
-#if MQTT_ENABLED
-        Serial.printf("[WiFi] MQTT broker: %s:%d\n", MQTT_BROKER_IP, MQTT_BROKER_PORT);
-#endif
+        // MQTT broker is logged authoritatively (with NVS/compile-time source)
+        // by initMQTT() — don't print the compile-time value here, it may be
+        // stale when the broker was NVS-provisioned.
         return;
     }
 

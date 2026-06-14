@@ -22,6 +22,18 @@ bool getSheetsConfig(String &urlOut, String &tokenOut);  // true only if BOTH st
 bool hasSheetsConfig();
 void clearSheetsConfig();
 
+// AP (Soft-AP) config storage (namespace "ap_cfg", keys "ssid" "pass")
+void saveApConfig(const String &ssid, const String &pass);
+bool getApConfig(String &ssidOut, String &passOut);  // true only if ssid non-empty AND pass >= 8 chars
+bool hasApConfig();
+void clearApConfig();
+
+// MQTT broker config storage (namespace "mqtt_cfg", keys "ip" "port")
+void saveMqttConfig(const String &ip, uint16_t port);
+bool getMqttConfig(String &ipOut, uint16_t &portOut);  // true only if ip non-empty AND port != 0
+bool hasMqttConfig();
+void clearMqttConfig();
+
 // Scale factor storage (namespace "scale_data", keys "scale1" "scale2")
 void  saveScaleFactor1(float factor);
 float getScaleFactor1();

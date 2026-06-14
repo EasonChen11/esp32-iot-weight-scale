@@ -1,5 +1,6 @@
 #include "web_pages.h"
 #include "config.h"
+#include "storage/nvs_storage.h"
 #if DEV_MODE_ENABLED
 #include "dev_mode.h"
 #endif
@@ -787,6 +788,10 @@ String getNetworkPageHTML()
     .danger-zone { border-top: 2px dashed #e74c3c; padding-top: 14px;
                    margin-top: 14px; }
     .danger-zone p { color: #95a5a6; font-size: 12px; margin: 6px 0; }
+    #apMsg { padding: 10px; border-radius: 6px; font-size: 14px;
+             margin-top: 10px; display: none; }
+    #apMsg.ok  { display: block; background: #d4edda; color: #155724; }
+    #apMsg.err { display: block; background: #f8d7da; color: #721c24; }
   </style>
 </head>
 <body>
@@ -825,6 +830,24 @@ String getNetworkPageHTML()
     <div id="msg"></div>
   </div>
 
+  <div class="card">
+    <h2>AP 設定（本機熱點）</h2>
+    <div class="row"><span class="k">目前 AP SSID</span><span>{{AP_SSID}}</span></div>
+    <div class="field">
+      <label>AP SSID</label>
+      <input id="apSsid" type="text" value="{{AP_SSID}}" maxlength="32">
+    </div>
+    <div class="field">
+      <label>AP 密碼（需重新輸入，8-63 碼、不可含空格）</label>
+      <div class="pwrow">
+        <input id="apPass" type="password" placeholder="8-63 個字元" maxlength="63">
+        <button class="eye" type="button" onclick="toggleApPw()">&#128065;</button>
+      </div>
+    </div>
+    <button class="primary" onclick="saveAp()">儲存 AP 設定</button>
+    <div id="apMsg"></div>
+  </div>
+
 <script>
 let pollTimer = null;
 
@@ -842,6 +865,31 @@ function show(elemId, cls, text) {
   const el = $(elemId);
   el.className = cls;
   el.innerText = text;
+}
+
+function toggleApPw() {
+  const p = $('apPass');
+  p.type = p.type === 'password' ? 'text' : 'password';
+}
+
+function saveAp() {
+  const s = $('apSsid').value.trim();
+  const p = $('apPass').value;
+  if (!s || s.length > 32) { show('apMsg', 'err', 'AP SSID 需 1-32 字元'); return; }
+  if (p.length < 8 || p.length > 63) { show('apMsg', 'err', 'AP 密碼需 8-63 碼'); return; }
+  if (p.indexOf(' ') >= 0) { show('apMsg', 'err', 'AP 密碼不可含空格'); return; }
+  const body = 's=' + encodeURIComponent(s) + '&p=' + encodeURIComponent(p);
+  fetch('/network/ap-save', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  })
+  .then(r => r.json().then(j => ({ ok: r.ok, j })))
+  .then(({ ok, j }) => {
+    if (ok) { show('apMsg', 'ok', 'AP 設定已儲存，重開機後生效'); $('apPass').value = ''; }
+    else { show('apMsg', 'err', '儲存失敗：' + (j.error || '未知錯誤')); }
+  })
+  .catch(() => show('apMsg', 'err', '儲存失敗'));
 }
 
 function refreshStatus() {
@@ -1095,6 +1143,14 @@ function clearWifiCreds() {
     html.replace("{{DEV_BANNER}}", "");
     html.replace("{{DEV_NETWORK_BUTTONS}}", "");
 #endif
+
+    String apSsidCur, apPassCur;
+    String curApSsid = getApConfig(apSsidCur, apPassCur) ? apSsidCur : String(AP_WIFI_SSID);
+    curApSsid.replace("&", "&amp;");
+    curApSsid.replace("\"", "&quot;");
+    curApSsid.replace("<", "&lt;");
+    curApSsid.replace(">", "&gt;");
+    html.replace("{{AP_SSID}}", curApSsid);
 
     return html;
 }
