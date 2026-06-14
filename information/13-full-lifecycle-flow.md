@@ -62,10 +62,11 @@
     │         ▼
     │    initSensor() → initWebRoutes() → initAutoLogger()
     │    → initMQTT() → initOLED() → initSchedule() → initDeepSleep()
+    │    → initOTA()  ← 驗證執行中 image；OTA 後首次開機在此確認 rollback 取消
     │         │
     │         ▼
     │    Core 0 Task 啟動
-    │    （Web server / MQTT / Auto-logger / Deep sleep monitor）
+    │    （Web server / MQTT / Auto-logger / Deep sleep monitor / OTA check）
     │         │
     │         ▼
     │    Core 1 loop 開始
@@ -217,9 +218,12 @@
   │        │
   │        ▼
   │    initSensor() → gpio_hold_dis(SCK) → scale.begin() → HX711 喚醒
+  │    initOTA() → OTA 後首次開機 rollback 確認（PENDING_VERIFY → 標記 valid）
+  │    checkOtaUpdate() → 比較 manifest 版本 → 有新版則下載驗證後重開機
   │    10 秒後 Auto-logger 記錄重量（NTP 時間戳）
   │    MQTT 每 5 秒發布
   │    Web server 可用
+  │    （OTA 進行中時 handleDeepSleep() 自動延遲）
   │        │
   │        │ ← 10 分鐘 →
   │        ▼

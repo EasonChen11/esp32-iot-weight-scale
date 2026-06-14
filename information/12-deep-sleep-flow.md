@@ -68,10 +68,26 @@ esp_sleep_get_wakeup_cause()
 Serial: "[SLEEP] Will stay awake for 600000 ms"
 ```
 
+## OTA 更新期間的深度睡眠延遲
+
+當 `OTA_ENABLED true` 時，`handleDeepSleep()` 在最開頭會檢查 `isOtaInProgress()`：
+
+```
+handleDeepSleep()
+    │
+    ├─ OTA_ENABLED && isOtaInProgress() ? → return（OTA 下載/寫入中，禁止入睡）
+    │
+    ...（其餘流程同下）
+```
+
+這確保 10 分鐘清醒計時器不會在 OTA 下載或寫入分區期間觸發深度睡眠。OTA 完成後 `otaInProgress` 重置為 `false`，裝置隨即重開機進入新 image，不會再走到入睡流程。
+
 ## 入睡流程 (Core 0, 每 10ms 被呼叫)
 
 ```
 handleDeepSleep()
+    │
+    ├─ OTA_ENABLED && isOtaInProgress() ? → return（OTA 進行中）
     │
     ├─ sleepTriggered == true ? → return（已觸發，避免重複）
     │

@@ -32,6 +32,9 @@
 #ifndef WIFI_CONFIG_ENABLED
 #define WIFI_CONFIG_ENABLED true
 #endif
+#ifndef OTA_ENABLED
+#define OTA_ENABLED true        // HTTPS pull OTA from GitHub Releases (requires WIFI_ENABLED)
+#endif
 #ifndef SIMULATE_SENSOR
 #define SIMULATE_SENSOR false
 #endif
@@ -86,6 +89,15 @@ const int WAKE_BTN_GND = 33;                    // GPIO used as button GND (OUTP
 const unsigned long AWAKE_DURATION_MS = 600000; // Stay awake 10 min after boot before sleeping
 const unsigned long WAKE_BTN_DEBOUNCE_MS = 200; // Software debounce window for awake-time button press
 const unsigned long WAKE_BTN_STARTUP_GRACE_MS = 2000; // Ignore button presses for the first N ms after boot
+
+// OTA (Over-The-Air update) — requires WIFI_ENABLED
+// Permanent URL that always points at the newest GitHub release's assets.
+// NOT a secret: this is a public, unauthenticated download link (anyone can fetch a
+// public release), so it lives here in config.h rather than config_secrets.h. It is
+// deployment config, though — a fork pointing at its own releases must edit this URL.
+const char *const OTA_MANIFEST_URL =
+    "https://github.com/EasonChen11/esp32-iot-weight-scale/releases/latest/download/manifest.json";
+const unsigned long OTA_HTTP_TIMEOUT_MS = 15000; // per-request HTTPS timeout
 
 // HX711 pins  (DT / SCK — no ACC pin)
 const int LOADCELL1_DOUT_PIN = 13;

@@ -57,6 +57,7 @@ initMQTT()                   ← 設定 MQTT broker
 initOLED()                   ← GPIO 供電 + I2C 初始化
 initSchedule()               ← 從 NVS 載入喚醒排程
 initDeepSleep()              ← 設定按鈕喚醒 + 記錄喚醒原因
+initOTA()                    ← 驗證執行中 image（OTA 首次開機 rollback 保護）
        │
        ▼
 xTaskCreatePinnedToCore()    ← 建立 Core 0 任務
@@ -81,6 +82,7 @@ loop() 開始在 Core 1 執行
 | NTP | `wifi_manager.cpp` | setup | 網路時間同步（UTC+8） |
 | 排程 | `schedule_manager.cpp` | setup/Web | NVS 喚醒排程管理 |
 | 深度睡眠 | `deep_sleep_manager.cpp` | Core 0 | 定時/按鈕喚醒 + 自動入睡 |
+| OTA | `ota_manager.cpp` | Core 0 | GitHub Releases HTTPS 韌體更新 |
 
 ## 功能開關
 
@@ -97,13 +99,15 @@ loop() 開始在 Core 1 執行
 | `NTP_ENABLED` | `true` | STA 連線成功時自動從 NTP server 同步時間 | 不同步，時間靠 `/sync` 或從 0 開始 |
 | `SCHEDULE_ENABLED` | `true` | 可設定每日喚醒時間（NVS 儲存），deep sleep 時用來計算下次喚醒 | 無排程功能，deep sleep 只能靠按鈕喚醒 |
 | `DEEP_SLEEP_ENABLED` | `false` | 開機 10 分鐘後自動進入深度睡眠（~10µA），入睡前自動 power down HX711 省電，靠排程/按鈕喚醒 | 永遠保持運行不休眠 |
+| `OTA_ENABLED` | `true` | 開機/喚醒時連網後自動檢查 GitHub latest release，有新版就下載驗證 sha256 後寫入備用分區並重開機 | 不檢查更新，只能 USB 燒錄 |
 
 ### 依賴關係圖
 
 ```
 WIFI_ENABLED ─┬─► WEB_SERVER_ENABLED
               ├─► MQTT_ENABLED
-              └─► NTP_ENABLED
+              ├─► NTP_ENABLED
+              └─► OTA_ENABLED（需 STA 連到網際網路）
 
 SCHEDULE_ENABLED ──► DEEP_SLEEP_ENABLED（排程才有意義）
 
@@ -117,6 +121,7 @@ NTP_ENABLED ──► SCHEDULE_ENABLED（時間準確排程才準）
 | `WIFI_ENABLED` + `WEB_SERVER_ENABLED` | Web 需要 WiFi，關 WiFi 開 Web 沒用 |
 | `WIFI_ENABLED` + `MQTT_ENABLED` | MQTT 需要 STA 連到 broker，關 WiFi 開 MQTT 沒用 |
 | `WIFI_ENABLED` + `NTP_ENABLED` | NTP 需要 STA 連網取得時間 |
+| `WIFI_ENABLED` + `OTA_ENABLED` | OTA 需要 STA 連到網際網路存取 GitHub Releases；關 WiFi 開 OTA 不會觸發任何更新檢查 |
 | `SCHEDULE_ENABLED` + `DEEP_SLEEP_ENABLED` | 排程是給 deep sleep 計算下次喚醒用的；不開 deep sleep 排程不會觸發動作 |
 | `NTP_ENABLED` + `SCHEDULE_ENABLED` | 排程靠 `getLocalTime()` 計算秒數；沒 NTP 也沒 `/sync` 時間會錯 |
 

@@ -92,6 +92,7 @@ All modules can be toggled independently in `config.h`:
 #define WIFI_ENABLED            true
 #define WEB_SERVER_ENABLED      true
 #define WIFI_CONFIG_ENABLED     true
+#define OTA_ENABLED             true
 #define MQTT_ENABLED            false
 #define AUTO_LOGGER_ENABLED     true
 #define OLED_ENABLED            true
@@ -107,6 +108,39 @@ Dependencies: `WEB_SERVER_ENABLED`, `MQTT_ENABLED`, `NTP_ENABLED`, and `GOOGLE_S
 `WIFI_CONFIG_ENABLED` requires `WIFI_ENABLED` and `WEB_SERVER_ENABLED`, and adds a heartbeat status indicator to the main dashboard with a runtime WiFi configuration subpage at `/network`.
 `DEEP_SLEEP_ENABLED` benefits from `SCHEDULE_ENABLED` + `NTP_ENABLED` for timed wake-ups.
 `GOOGLE_SHEETS_ENABLED` requires a Google Apps Script URL **and** a matching shared token. The device reads them **NVS-first** (provisioned over serial — see below), falling back to the compile-time `GOOGLE_SHEETS_URL` + `GOOGLE_SHEETS_TOKEN` in `config_secrets.h`. Because public/OTA builds ship with placeholder secrets, provision the real values over serial so they persist in NVS across OTA updates. See [`google_sheets/README.md`](google_sheets/README.md) for the Apps Script deployment.
+`OTA_ENABLED` requires `WIFI_ENABLED` and outbound internet. On boot/wake the device
+fetches `manifest.json` from the GitHub `latest` release, and if its `version` is newer
+than the compiled `FIRMWARE_VERSION` (set in `platformio.ini`), downloads `firmware.bin`,
+verifies its sha256 over HTTPS, writes it to the inactive OTA slot, and reboots. A new
+image is marked valid only after it boots through `setup()`; otherwise it rolls back.
+
+**Releasing an update (tag-driven, automated):** the `release.yml` GitHub Actions workflow
+turns a pushed version tag into a published release. The version lives in one place —
+`FIRMWARE_VERSION` in `platformio.ini` — and the tag must match it.
+
+```bash
+# 1. Bump the version in platformio.ini:  -DFIRMWARE_VERSION=\"1.2.0\"
+# 2. Commit the bump
+git commit -am "release: v1.2.0"
+# 3. Tag and push the tag — CI does the rest
+git tag v1.2.0
+git push github v1.2.0
+```
+
+On a `v*.*.*` tag, the workflow: verifies the tag matches `FIRMWARE_VERSION` (fails loudly
+on mismatch), runs `pio run`, generates `manifest.json` via `scripts/make_manifest.py`, and
+publishes a GitHub Release with `firmware.bin` + `manifest.json` as assets. The newest
+release becomes "latest", which is exactly where the device's permanent OTA URL points.
+
+> **Manual fallback** (no CI): `pio run`, then
+> `python scripts/make_manifest.py <version> .pio/build/esp32dev/firmware.bin`, then
+> `gh release create v<version> .pio/build/esp32dev/firmware.bin .pio/build/esp32dev/manifest.json --generate-notes`.
+> The release must be marked "latest" because the device reads `releases/latest/...`.
+
+> ⚠️ Switching to the OTA partition layout (`partitions.csv`) requires a one-time USB
+> `erase + uploadfs + upload`. This wipes NVS (calibration offsets, schedules) and stored
+> records, so re-calibrate and reset schedules once after the first OTA-capable flash.
+> Records already sync to Google Sheets, so record loss is recoverable.
 
 ### Developer Mode
 
