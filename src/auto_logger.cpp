@@ -71,8 +71,10 @@ void handleAutoLogging()
             long id = getNextRecordId();
             String dateStr = timeReliable ? getLogDate() : "no-sync";
             String timeStr = timeReliable ? getLogTimestamp() : "no-sync";
-            String s1Str = String(getCachedWeight1(), 3);
-            String s2Str = String(getCachedWeight2(), 3);
+            float w1 = readLogWeight1();
+            float w2 = readLogWeight2();
+            String s1Str = String(w1, 3);
+            String s2Str = String(w2, 3);
 
             addRecordToStorage(id, dateStr, timeStr, s1Str, s2Str);
 
@@ -84,8 +86,7 @@ void handleAutoLogging()
             else
             {
                 Serial.printf("[AutoLogger] Initial record saved (ID=%ld, %s %s): S1=%.3f S2=%.3f kg\n",
-                              id, dateStr.c_str(), timeStr.c_str(),
-                              getCachedWeight1(), getCachedWeight2());
+                              id, dateStr.c_str(), timeStr.c_str(), w1, w2);
             }
         }
         else
@@ -119,12 +120,14 @@ void handleAutoLogging()
             long id = getNextRecordId();
             String dateStr = getLogDate();
             String timeStr = getLogTimestamp();
-            String s1Str = String(getCachedWeight1(), 3);
-            String s2Str = String(getCachedWeight2(), 3);
+            float w1 = readLogWeight1();
+            float w2 = readLogWeight2();
+            String s1Str = String(w1, 3);
+            String s2Str = String(w2, 3);
 
             addRecordToStorage(id, dateStr, timeStr, s1Str, s2Str);
             Serial.printf("[AutoLogger] Hourly record saved (ID=%ld, %s): S1=%.3f S2=%.3f kg\n",
-                          id, timeStr.c_str(), getCachedWeight1(), getCachedWeight2());
+                          id, timeStr.c_str(), w1, w2);
         }
     }
 #endif

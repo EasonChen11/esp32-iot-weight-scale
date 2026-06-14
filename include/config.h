@@ -43,6 +43,11 @@
 // Copy config_secrets.h.example → config_secrets.h and fill in your values
 #include "config_secrets.h"
 
+// CPU clock — lower = cooler. 80 MHz is the minimum for WiFi (AP+STA).
+// Bump to 160 if STA reliability is ever in doubt. Applied in setup() via
+// setCpuFrequencyMhz(). Default (unset) would be the framework's 240 MHz.
+const uint32_t CPU_FREQ_MHZ = 80;
+
 // MQTT  (broker runs on PC via docker/docker-compose.mqtt.yml)
 const char *const MQTT_CLIENT_ID = "esp32-weight-scale";
 const char *const MQTT_TOPIC_SENSOR1 = "weight-scale/sensor1";
@@ -86,7 +91,7 @@ const int MAX_SCHEDULE_ENTRIES = 10;
 #endif
 const int WAKE_BTN_PIN = 32;                    // Wake-up button signal (INPUT_PULLUP, active LOW — supports ext0)
 const int WAKE_BTN_GND = 33;                    // GPIO used as button GND (OUTPUT LOW — button draws only µA)
-const unsigned long AWAKE_DURATION_MS = 600000; // Stay awake 10 min after boot before sleeping
+const unsigned long AWAKE_DURATION_MS = 300000; // Stay awake 5 min after boot before sleeping
 const unsigned long WAKE_BTN_DEBOUNCE_MS = 200; // Software debounce window for awake-time button press
 const unsigned long WAKE_BTN_STARTUP_GRACE_MS = 2000; // Ignore button presses for the first N ms after boot
 
@@ -108,6 +113,13 @@ const int LOADCELL2_SCK_PIN = 26;
 // Calibration  (scale_factor = raw_reading / known_weight_kg)
 const float LOADCELL1_SCALE_FACTOR = 85000.0;
 const float LOADCELL2_SCALE_FACTOR = 85000.0;
+
+// Sensor sampling / smoothing
+const unsigned long SENSOR_READ_INTERVAL_MS = 500; // display sampling cadence (2 Hz)
+const unsigned long SENSOR_LOOP_DELAY_MS = 50; // Core-1 loop() pacing (was delay(1))
+const int DISPLAY_MEDIAN_WINDOW = 5; // moving-median window for the live/displayed value
+const int LOG_SAMPLE_COUNT = 11; // raw samples taken when writing a record
+const int LOG_TRIM_COUNT = 2; // drop this many highest + lowest, mean the rest (11-2*2=7)
 
 // Auto-logger
 const unsigned long STARTUP_RECORD_DELAY_MS = 10000;

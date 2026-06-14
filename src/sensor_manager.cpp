@@ -4,14 +4,71 @@
 #include <Arduino.h>
 #include <driver/gpio.h>
 #include "storage/nvs_storage.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
 static HX711 scale1;
 static HX711 scale2;
+
+// Serializes HX711 access between the Core-1 display read (updateSensor) and the
+// Core-0 record read (readLogWeight*). Without it, simultaneous bit-banged reads
+// from both cores corrupt the value. Created in initSensor().
+static SemaphoreHandle_t hx711Mutex = nullptr;
 
 volatile float cached_weight1 = 0.0;
 volatile float cached_weight2 = 0.0;
 
 static unsigned long last_read_time = 0;
+
+// ── Display smoothing: per-sensor moving-median ring buffer ──────────────
+static float medWin1[DISPLAY_MEDIAN_WINDOW];
+static float medWin2[DISPLAY_MEDIAN_WINDOW];
+static int   medCount1 = 0, medHead1 = 0;
+static int   medCount2 = 0, medHead2 = 0;
+
+// Ascending insertion sort for small float arrays (median / trimmed mean).
+static void sortFloats(float *a, int n)
+{
+    for (int i = 1; i < n; i++) {
+        float key = a[i];
+        int j = i - 1;
+        while (j >= 0 && a[j] > key) { a[j + 1] = a[j]; j--; }
+        a[j + 1] = key;
+    }
+}
+
+static void pushMedian1(float v)
+{
+    medWin1[medHead1] = v;
+    medHead1 = (medHead1 + 1) % DISPLAY_MEDIAN_WINDOW;
+    if (medCount1 < DISPLAY_MEDIAN_WINDOW) medCount1++;
+}
+
+static void pushMedian2(float v)
+{
+    medWin2[medHead2] = v;
+    medHead2 = (medHead2 + 1) % DISPLAY_MEDIAN_WINDOW;
+    if (medCount2 < DISPLAY_MEDIAN_WINDOW) medCount2++;
+}
+
+// Median of the samples collected so far (1..DISPLAY_MEDIAN_WINDOW).
+static float median1()
+{
+    if (medCount1 == 0) return 0.0f;
+    float tmp[DISPLAY_MEDIAN_WINDOW];
+    for (int i = 0; i < medCount1; i++) tmp[i] = medWin1[i];
+    sortFloats(tmp, medCount1);
+    return tmp[(medCount1 - 1) / 2];
+}
+
+static float median2()
+{
+    if (medCount2 == 0) return 0.0f;
+    float tmp[DISPLAY_MEDIAN_WINDOW];
+    for (int i = 0; i < medCount2; i++) tmp[i] = medWin2[i];
+    sortFloats(tmp, medCount2);
+    return tmp[(medCount2 - 1) / 2];
+}
 
 #if SIMULATE_SENSOR
 static float sim_weight1 = 10.0;
@@ -28,7 +85,7 @@ static float _doRead1()
     return sim_weight1;
 #else
     if (!scale1.is_ready()) return -1.0f;
-    float raw = scale1.get_units(3);
+    float raw = scale1.get_units(1); // single read — no busy-wait; smoothing done by median buffer
     if (fabsf(raw) < 0.01f) raw = 0.0f;
     return raw;
 #endif
@@ -42,7 +99,7 @@ static float _doRead2()
     return sim_weight2;
 #else
     if (!scale2.is_ready()) return -1.0f;
-    float raw = scale2.get_units(3);
+    float raw = scale2.get_units(1); // single read — no busy-wait; smoothing done by median buffer
     if (fabsf(raw) < 0.01f) raw = 0.0f;
     return raw;
 #endif
@@ -52,6 +109,7 @@ static float _doRead2()
 
 void initSensor(long savedOffset1, long savedOffset2)
 {
+    if (hx711Mutex == nullptr) hx711Mutex = xSemaphoreCreateMutex();
     Serial.printf("[Sensor] Offsets: sensor1=%ld, sensor2=%ld\n", savedOffset1, savedOffset2);
 
 #if !SIMULATE_SENSOR
@@ -135,11 +193,23 @@ void initSensor(long savedOffset1, long savedOffset2)
 
 void updateSensor()
 {
-    if (millis() - last_read_time >= 500)
+    if (millis() - last_read_time >= SENSOR_READ_INTERVAL_MS)
     {
-        cached_weight1 = _doRead1();
-        cached_weight2 = _doRead2();
         last_read_time = millis();
+
+        // Try-lock: if a record read (readLogWeight) holds the HX711, skip this
+        // tick — the displayed median just keeps its last value (no stall).
+        if (hx711Mutex != nullptr && xSemaphoreTake(hx711Mutex, 0) != pdTRUE) return;
+
+        float r1 = _doRead1();
+        if (r1 >= 0.0f) pushMedian1(r1); // skip the -1.0 "not ready" sentinel
+        float r2 = _doRead2();
+        if (r2 >= 0.0f) pushMedian2(r2);
+
+        if (hx711Mutex != nullptr) xSemaphoreGive(hx711Mutex);
+
+        cached_weight1 = median1();
+        cached_weight2 = median2();
         Serial.printf("[Sensor] S1=%.3f kg  S2=%.3f kg  Total=%.3f kg\n",
                       cached_weight1, cached_weight2,
                       cached_weight1 + cached_weight2);
@@ -156,6 +226,67 @@ float getCachedWeight()
     float w1 = (cached_weight1 > 0.0f) ? cached_weight1 : 0.0f;
     float w2 = (cached_weight2 > 0.0f) ? cached_weight2 : 0.0f;
     return w1 + w2;
+}
+
+// Fresh high-precision read for the permanent record — trimmed mean of LOG_SAMPLE_COUNT
+// raw samples (drop LOG_TRIM_COUNT highest + lowest). Spike-robust and averaged.
+float readLogWeight1()
+{
+#if SIMULATE_SENSOR
+    return _doRead1();
+#else
+    // Exclusive HX711 access for the whole multi-sample read (vs Core-1 updateSensor).
+    if (hx711Mutex == nullptr || xSemaphoreTake(hx711Mutex, pdMS_TO_TICKS(3000)) != pdTRUE)
+        return getCachedWeight1(); // couldn't acquire — fall back to last cached value
+    float result;
+    float samples[LOG_SAMPLE_COUNT];
+    int n = 0;
+    for (int i = 0; i < LOG_SAMPLE_COUNT; i++) {
+        if (!scale1.wait_ready_timeout(2000)) break; // sensor unresponsive — stop gathering
+        samples[n++] = scale1.get_units(1);
+    }
+    if (n < (2 * LOG_TRIM_COUNT + 1)) {
+        result = getCachedWeight1(); // too few — fall back
+    } else {
+        sortFloats(samples, n);
+        float sum = 0.0f;
+        int cnt = 0;
+        for (int i = LOG_TRIM_COUNT; i < n - LOG_TRIM_COUNT; i++) { sum += samples[i]; cnt++; }
+        result = sum / cnt;
+        if (fabsf(result) < 0.01f) result = 0.0f;
+    }
+    xSemaphoreGive(hx711Mutex);
+    return result;
+#endif
+}
+
+float readLogWeight2()
+{
+#if SIMULATE_SENSOR
+    return _doRead2();
+#else
+    if (hx711Mutex == nullptr || xSemaphoreTake(hx711Mutex, pdMS_TO_TICKS(3000)) != pdTRUE)
+        return getCachedWeight2();
+    float result;
+    float samples[LOG_SAMPLE_COUNT];
+    int n = 0;
+    for (int i = 0; i < LOG_SAMPLE_COUNT; i++) {
+        if (!scale2.wait_ready_timeout(2000)) break;
+        samples[n++] = scale2.get_units(1);
+    }
+    if (n < (2 * LOG_TRIM_COUNT + 1)) {
+        result = getCachedWeight2();
+    } else {
+        sortFloats(samples, n);
+        float sum = 0.0f;
+        int cnt = 0;
+        for (int i = LOG_TRIM_COUNT; i < n - LOG_TRIM_COUNT; i++) { sum += samples[i]; cnt++; }
+        result = sum / cnt;
+        if (fabsf(result) < 0.01f) result = 0.0f;
+    }
+    xSemaphoreGive(hx711Mutex);
+    return result;
+#endif
 }
 
 void tareSensor1()

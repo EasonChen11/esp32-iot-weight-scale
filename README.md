@@ -16,7 +16,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 
 - **Dual HX711 Sensors** — two independent load cells with per-sensor calibration
 - **Runtime Sensor Calibration** — adjust scale factor and absolute zero per-sensor from the web UI; persisted to NVS, no re-flash required. See `information/02-sensor-flow.md`
-- **Web Dashboard** — built-in HTTP UI with live charts (Chart.js from LittleFS)
+- **Web Dashboard** — built-in HTTP UI with live charts (Chart.js from LittleFS). Reachable two ways, served simultaneously (AP+STA): (1) join the device's `ESP32_Weight_Scale` hotspot and open `http://192.168.4.1`; (2) when the device is also on your home WiFi, open its LAN IP (shown in the boot log and on the `/network` page) from any device on the same network.
 - **OLED Display** — SSD1306 auto-cycles Total / Sensor 1 / Sensor 2
 - **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS (hourly disabled in deep sleep mode)
 - **Google Sheets Sync** — auto-upload records to Google Sheets via Apps Script with deduplication
