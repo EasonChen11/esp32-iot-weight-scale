@@ -90,7 +90,7 @@ isNewerVersion(FIRMWARE_VERSION, manifest.version)?
 | 功能開關 | `config.h` | `#define OTA_ENABLED true` |
 | Manifest URL | `config.h` | `OTA_MANIFEST_URL` = `https://github.com/EasonChen11/esp32-iot-weight-scale/releases/latest/download/manifest.json` |
 | HTTP 逾時 | `config.h` | `OTA_HTTP_TIMEOUT_MS` = 15000 ms |
-| 韌體版號 | `platformio.ini` | `-DFIRMWARE_VERSION=\"1.1.0\"`（build flag） |
+| 韌體版號 | `platformio.ini` | `-DFIRMWARE_VERSION=\"X.Y.Z\"`（build flag） |
 | CA bundle | `cert/x509_crt_bundle.bin` | Mozilla 根憑證，透過 `board_build.embed_files` 嵌入韌體 |
 | 分區配置 | `partitions.csv` | 自訂雙 OTA（`app0`/`app1` 各 0x190000） |
 
@@ -146,16 +146,40 @@ pio run --target upload     # 燒韌體
 發版採 **tag 驅動、CI 自動化**（見 `.github/workflows/release.yml`）。版號的單一來源是 `platformio.ini` 的 `FIRMWARE_VERSION`，tag 必須與它一致。
 
 ```bash
-# 1. 改 platformio.ini：-DFIRMWARE_VERSION=\"1.2.0\"
-git commit -am "release: v1.2.0"
-# 2. 打 tag 推上去，CI 全自動
-git tag v1.2.0
-git push github v1.2.0
+# 1. 改 platformio.ini：-DFIRMWARE_VERSION=\"X.Y.Z\"
+git commit -am "release: vX.Y.Z"
+# 2. 打 tag 推上去，CI 全自動（tag 版號必須與 FIRMWARE_VERSION 一致）
+git tag vX.Y.Z
+git push origin vX.Y.Z
 ```
 
 `release.yml` 在收到 `v*.*.*` tag 後會：跑完整 build matrix（5 種組態）+ cppcheck 驗證 → 驗證 tag 版號與 `FIRMWARE_VERSION` 一致 → **用 `scripts/update_ca_bundle.sh` 從 curl.se 抓最新 Mozilla 根憑證重新產生 `cert/x509_crt_bundle.bin`**（每次發版自動更新憑證，免手動維護；下載失敗會保留 committed bundle、不擋發版）→ `pio run` → 用 `scripts/make_manifest.py` 產生 `manifest.json` → 建立 GitHub Release 並附上 `firmware.bin` + `manifest.json`。最新的 release 會成為 **latest**，正是裝置那個永久 OTA URL 指向的位置，所以版本之間不需要改任何 URL。
 
 > **手動 fallback**（無 CI）：`pio run` → `python scripts/make_manifest.py <version> .pio/build/esp32dev/firmware.bin` → `gh release create v<version> .pio/build/esp32dev/firmware.bin .pio/build/esp32dev/manifest.json --generate-notes`。release 必須標記為 "latest"。
+
+## 測試／驗證 OTA
+
+OTA 檢查**每次開機（或喚醒）後、WiFi 連上時只觸發一次**（`main.cpp` 的 `otaChecked` guard），不會定時輪詢。因此驗證一次 OTA 升級的步驟是：
+
+1. 確認已有一個**版號比裝置目前韌體更新**的 Release 發佈為 latest（`manifest.json` 可由 OTA URL 取得）。
+2. 開啟序列監控觀察過程。
+3. **重開裝置**（reset 按鈕或重新上電）以觸發那一次性檢查。
+4. 監控應依序出現：
+
+   ```
+   [OTA] Running firmware version: <舊版>
+   [OTA] running <舊版>, latest <新版>
+   [OTA] update available -> <新版>
+   [OTA] verified + written <新版>, rebooting...
+   ── 裝置自動重開 ──
+   [OTA] Running firmware version: <新版>
+   [OTA] running <新版>, latest <新版>
+   [OTA] already up to date
+   ```
+
+第二次開機印出 `Running firmware version: <新版>` 且 `already up to date`，即代表升級成功。NVS（校正 offset、WiFi、排程等）跨 OTA 保留，因為 `nvs` 分區位置在更新前後不變。
+
+> 監控若掛上 `esp32_exception_decoder` filter，OTA 重開機時可能出現 `addr2line ... firmware.elf: No such file` 的紅字——那是 decoder 想解析開機 ROM 的正常訊息但找不到對應 elf（OTA 來的韌體本機沒有 elf），**並非當機**，可忽略。
 
 ## 相關檔案
 
