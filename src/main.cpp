@@ -109,6 +109,11 @@ void setup()
   Serial.begin(115200);
   delay(300); // Wait for serial monitor connection
 
+  // Lower the CPU clock before bringing up WiFi/peripherals — reduces self-heating
+  // (which otherwise drifts the load-cell readings). 80 MHz keeps WiFi (AP+STA) stable.
+  setCpuFrequencyMhz(CPU_FREQ_MHZ);
+  Serial.printf("[System] CPU frequency: %u MHz\n", getCpuFrequencyMhz());
+
   // Initialize storage and sensor
   initStorage();
   long offset1 = getAbsoluteOffset();
@@ -181,5 +186,5 @@ void loop()
 #if OLED_ENABLED
   handleOLED();
 #endif
-  delay(1); // yield CPU time so WiFi stack on Core 0 gets more bandwidth
+  delay(SENSOR_LOOP_DELAY_MS); // pace Core-1 sensor loop (was 1 ms busy spin); web/AP run on Core 0
 }
