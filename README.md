@@ -21,6 +21,7 @@ Weight data is served on a built-in web dashboard and optionally streamed to an 
 - **Auto-Logging** — startup + hourly records, RAM-cached, persisted to LittleFS (hourly disabled in deep sleep mode)
 - **Google Sheets Sync** — auto-upload records to Google Sheets via Apps Script with deduplication
 - **MQTT + Node-RED** — optional live stream to a Docker-based dashboard
+- **OTA-Safe Provisioning** — STA WiFi, AP password, MQTT broker, and Google Sheets config live in NVS; set once over serial (AP also via the web UI) and they survive OTA updates. See `information/17-config-provisioning-flow.md`
 - **NTP Time Sync** — automatic via NTP; browser `/sync` as AP-mode fallback
 - **Scheduled Deep Sleep** — wake at configured times or by button press
 - **Simulation Mode** — random-fluctuation test mode without hardware
@@ -154,15 +155,18 @@ Some destructive endpoints (`POST /factory-reset`, `POST /network/clear`) are hi
 | `dev-off` | Disable developer mode |
 | `dev-status` | Print current mode |
 
-**Google Sheets provisioning (serial, 115200 baud):** the Sheets URL/token are operator/service configuration, **not** exposed on any web page. Set them once over USB serial; they are stored in NVS and survive reboots and OTA updates.
+**Operator config provisioning (serial, 115200 baud):** AP password, MQTT broker, and Google Sheets config are stored in NVS and **survive reboots and OTA updates** — set them once over USB before deployment. Because public/OTA builds ship with placeholder secrets (`config_secrets.h.example`), any value not provisioned into NVS falls back to those placeholders after an OTA. Sensitive service secrets (MQTT, Sheets) are **not** exposed on any web page; AP credentials can additionally be set on the `/network` web page (write-only).
 
 | Command | Effect |
 |---|---|
+| `ap-set <ssid> <pass>` | Save Soft-AP SSID + password to NVS (ssid 1-32, pass 8-63 chars, no spaces) |
+| `ap-status` / `ap-clear` | Show source (NVS / compile-time) + SSID (pass masked) / erase NVS config |
+| `mqtt-set <ip> <port>` | Save MQTT broker address to NVS (port 1-65535) |
+| `mqtt-status` / `mqtt-clear` | Show source + broker / erase NVS config |
 | `sheets-set <url> <token>` | Save the Apps Script URL + shared token to NVS |
-| `sheets-status` | Show whether NVS config exists (token shown masked) |
-| `sheets-clear` | Erase the NVS config; revert to the compile-time fallback |
+| `sheets-status` / `sheets-clear` | Show whether NVS config exists (token masked) / erase NVS config |
 
-> Requires `DEV_MODE_ENABLED` (default on) so the serial dispatcher is active. The token is never echoed in plaintext. For initial provisioning, build with `DEV_MODE_ENABLED true`.
+> Requires `DEV_MODE_ENABLED` (default on) so the serial dispatcher is active. Passwords/tokens are never echoed in plaintext (length only). STA WiFi is provisioned via the `/network` web page. After changing AP or MQTT config, reboot to apply. See `information/17-config-provisioning-flow.md`.
 
 When dev mode flips, any open dashboard tab auto-reloads within ~1 s (via `/tick` polling) so the developer buttons appear or disappear automatically.
 
