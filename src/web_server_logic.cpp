@@ -228,6 +228,23 @@ void initWebRoutes(WebServer &server)
                   clearStaCredentials();
                   server.send(200, "application/json",
                               "{\"status\":\"cleared\"}"); });
+
+    server.on("/network/ap-save", HTTP_POST, [&server]()
+              {
+                  server.sendHeader("Cache-Control", "no-store");
+                  String ssid = server.arg("s");
+                  String pass = server.arg("p");
+                  ssid.trim();
+                  if (ssid.length() == 0 || ssid.length() > 32 ||
+                      pass.length() < 8 || pass.length() > 63 ||
+                      pass.indexOf(' ') >= 0) {
+                      server.send(400, "application/json",
+                                  "{\"error\":\"ssid 1-32 chars, pass 8-63 chars, no spaces\"}");
+                      return;
+                  }
+                  saveApConfig(ssid, pass);
+                  server.send(200, "application/json",
+                              "{\"status\":\"saved\",\"reboot_required\":true}"); });
 #endif
 
     // ── Record management ─────────────────────────────────────────────
