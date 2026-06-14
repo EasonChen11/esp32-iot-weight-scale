@@ -53,7 +53,7 @@ updateSensor()
        │
        └─ 真實模式：scale1.is_ready() ?
               ├─ No: return -1.0（感測器未準備好）
-              └─ Yes: scale1.get_units(3)  ← 讀 3 次平均
+              └─ Yes: scale1.get_units(1)  ← 單讀一筆（不忙等）
                       │
                       └─ |raw| < 0.01 → 歸零（消除雜訊）
        │
@@ -70,6 +70,13 @@ updateSensor()
   last_read_time = millis()
   Serial 輸出
 ```
+
+> **降溫重構**：原本每次 `get_units(3)`（連讀 3 筆）會在 HX711 的 10 SPS 下忙等 ~200ms/顆；
+> 改為單讀一筆後幾乎不忙等。平滑改由**軟體移動中位數**負責：每筆讀數推入 `DISPLAY_MEDIAN_WINDOW`（5）
+> 筆的環形緩衝，`cached_weight` 取其**中位數**——中位數會完全濾掉偶發尖刺，而非被平均拉動。
+> 讀取週期由 `SENSOR_READ_INTERVAL_MS`（500ms）控制；Core-1 `loop()` 以 `SENSOR_LOOP_DELAY_MS`（50ms）
+> 節流，避免空轉發熱。CPU 時脈在 `setup()` 由 `setCpuFrequencyMhz(CPU_FREQ_MHZ)` 降至 80 MHz。
+> HX711 存取由一個 mutex 序列化（顯示讀取與記錄讀取不會同時碰感測器）。
 
 ## 模擬模式（SIMULATE_SENSOR）
 
@@ -90,6 +97,23 @@ _doRead2():
 模擬值範圍：S1 = 24.5~25.5 kg, S2 = 21.5~22.5 kg, Total ≈ 46~48 kg
 ```
 
+## 記錄讀取（readLogWeight，截尾平均）
+
+連續顯示用中位數（便宜、抗尖刺）；但寫入永久記錄的值走**獨立、高精度**的路徑，與顯示解耦：
+
+    readLogWeight1() / readLogWeight2()   ← 由 auto-logger 在記錄當下呼叫
+           │
+           ├─ 模擬模式：回傳一筆模擬值
+           │
+           └─ 真實模式：取得 HX711 mutex，讀 LOG_SAMPLE_COUNT（11）筆
+                   │  （每筆 wait_ready_timeout 保護）
+                   ├─ 去掉最高 LOG_TRIM_COUNT（2）、最低 2 筆
+                   ├─ 剩 7 筆取平均（截尾平均：抗尖刺又保留平均降噪）
+                   └─ 樣本不足 / 拿不到 mutex → 回退用 cached 值（不卡死）
+
+- 忙等只在記錄當下發生（每顆 ~1.1 秒、兩顆依序），深睡模式一次喚醒一次、常開模式每小時一次 → 發熱可忽略。
+- 因此**記錄值準確且不受顯示中位數的反應延遲影響**；Google Sheets 同步的就是這個值。
+
 ## 資料存取方式
 
 ```
@@ -107,6 +131,7 @@ _doRead2():
 
 - `volatile float` 確保跨核心讀取不會被編譯器優化掉
 - `getCachedWeight()` = S1 + S2，負值視為 0（感測器未就緒）
+- **Auto-logger 例外**：寫入記錄時不讀 `getCachedWeight*()`，而是呼叫 `readLogWeight1/2()`（截尾平均，見上節）。`getCachedWeight*()`（中位數）僅供 Web / MQTT / OLED 的即時顯示。
 
 ## Tare 與校準
 
